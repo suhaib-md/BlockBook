@@ -1,0 +1,43 @@
+# ─── User data — personal, and never belongs in a repo ───────────────
+# data.json holds real world coordinates. Even in a private repo, keep it out:
+# the repo is a backup of the CODE, not of the save data. Export deliberately.
+data.json
+data.json.tmp
+data.json.corrupt-*
+backups/
+blockbook-*.json
+
+# ─── Xaero / JourneyMap backups written by the exporter ──────────────
+*.waypoints.bak
+XaeroWaypoints.bak/
+
+# ─── Node (Phase 8+) ─────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+
+# ─── Rust / Tauri (Phase 8+) ─────────────────────────────────────────
+src-tauri/target/
+src-tauri/gen/
+target/
+**/*.rs.bk
+
+# ─── Build output ────────────────────────────────────────────────────
+*.msi
+*.exe
+*.nsis.zip
+
+# ─── Editor / OS ─────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# ─── Scratch ─────────────────────────────────────────────────────────
+scratch/
+tmp/
