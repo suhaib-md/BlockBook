@@ -13,8 +13,8 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 
 | Phase | Name | Est. | Ships | Status |
 |---|---|---|---|---|
-| 0 | Setup | 0.5 h | — | ☐ |
-| 1 | Data model + seed | 1 h | — | ☐ |
+| 0 | Setup | 0.5 h | — | ☑ |
+| 1 | Data model + seed | 1 h | — | ☑ |
 | 2 | UI shell + list | 2 h | — | ☐ |
 | 3 | CRUD + search + filter | 2 h | **v0.1** | ☐ |
 | 4 | Nether math + validator ⭐ | 1.5 h | **v0.2** | ☐ |
@@ -37,11 +37,12 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 
 **Goal:** a folder and a file that opens.
 
-- [ ] `index.html` in the project root — a heading and nothing else
-- [ ] `git init`; commit the docs and the empty shell
+- [x] `index.html` in the project root — a heading and nothing else
+- [x] `git init`; commit the docs and the empty shell
 - [ ] Open `index.html` in Edge. Pin the tab.
 - [ ] Optional: VS Code "Live Server" extension for auto-reload
-- [ ] Confirm `.gitignore` covers `node_modules/`, `dist/`, `target/`, `backups/`, `data.json`
+- [x] Confirm `.gitignore` covers `node_modules/`, `dist/`, `target/`, `backups/`, `data.json`
+      — verified with `git check-ignore -v`, not just by reading the file
 
 **Docs:** [02-TRD §9](02-TRD.md)
 
@@ -56,13 +57,16 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 
 **Goal:** the real coordinates exist as structured data.
 
-- [ ] Copy the JSDoc block from [05-DATA-SCHEMA §10](05-DATA-SCHEMA.md) to the top of the script
-- [ ] Inline `data/seed.json`'s array as a JS constant — **not** `fetch()`; `file://`
+- [x] Copy the JSDoc block from [05-DATA-SCHEMA §10](05-DATA-SCHEMA.md) to the top of the script
+- [x] Inline `data/seed.json`'s array as a JS constant — **not** `fetch()`; `file://`
       blocks it (see [02-TRD §6.1](02-TRD.md))
-- [ ] Write `buildInitialData(seed)` producing the full root document: fills `id`,
+- [x] Write `buildInitialData(seed)` producing the full root document: fills `id`,
       `tags: []`, `notes: ""`, `linkedPortalId: null`, `favorite: false`, timestamps
-- [ ] Set the two `linkedPortalId` values for the verified Trial ↔ Fortress pair
-- [ ] `console.log(state.data)` and count
+- [x] Set the two `linkedPortalId` values for the verified Trial ↔ Fortress pair
+- [x] `console.log(state.data)` and count
+- [x] **Added:** `repairPortalLinks()` enforcing invariants I1–I4 and link symmetry
+      ([05-DATA-SCHEMA §4.4](05-DATA-SCHEMA.md)). The schema requires it and it is
+      pure data-model work, so it belongs here rather than in Phase 4.
 
 **Docs:** [05-DATA-SCHEMA](05-DATA-SCHEMA.md)
 
