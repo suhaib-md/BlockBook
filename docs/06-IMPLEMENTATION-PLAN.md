@@ -15,10 +15,10 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 |---|---|---|---|---|
 | 0 | Setup | 0.5 h | — | ☑ |
 | 1 | Data model + seed | 1 h | — | ☑ |
-| 2 | UI shell + list | 2 h | — | ☐ |
-| 3 | CRUD + search + filter | 2 h | **v0.1** | ☐ |
-| 4 | Nether math + validator ⭐ | 1.5 h | **v0.2** | ☐ |
-| 5 | Import / export | 1.5 h | — | ☐ |
+| 2 | UI shell + list | 2 h | — | ☑ |
+| 3 | CRUD + search + filter | 2 h | **v0.1** | ☑ |
+| 4 | Nether math + validator ⭐ | 1.5 h | **v0.2** | ☑ |
+| 5 | Import / export | 1.5 h | — | ☑ |
 | 6 | Brewing tab | 2 h | **v0.3** | ☐ |
 | — | **🛑 USE IT FOR A WEEK** | 7 days | — | ☐ |
 | 7 | Polish | 1.5 h | — | ☐ |
@@ -79,14 +79,19 @@ present, and the Trial ↔ Fortress link is symmetric in both directions.
 
 **Goal:** see the coordinates on screen.
 
-- [ ] Paste the token block from [04-UIUX-SPEC §2](04-UIUX-SPEC.md) into `:root`
-- [ ] Tab bar: Coordinates · Portals · Brewing · Reference (last three are stubs)
-- [ ] One `render()` that rebuilds the active tab from `state`
-- [ ] Location card per [04-UIUX-SPEC §4.1](04-UIUX-SPEC.md): icon, name, coordinate, dimension badge
-- [ ] Coordinates in `--font-mono` so digits align down the column
-- [ ] Dimension badge colours: OW green, NE red, EN purple
-- [ ] Sort control: name · type · recently updated
-- [ ] Status bar: counts
+- [x] Paste the token block from [04-UIUX-SPEC §2](04-UIUX-SPEC.md) into `:root`
+- [x] Tab bar: Coordinates · Portals · Brewing · Reference (last three are stubs)
+- [x] One `render()` that rebuilds the active tab from `state`
+- [x] Location card per [04-UIUX-SPEC §4.1](04-UIUX-SPEC.md): icon, name, coordinate, dimension badge
+- [x] Coordinates in `--font-mono` so digits align down the column
+      — plus `font-variant-numeric: tabular-nums`, without which "1" is narrower
+      than "8" and a column of coordinates still fails to line up
+- [x] Dimension badge colours: OW green, NE red, EN purple
+- [x] Sort control: name · type · recently updated
+- [x] Status bar: counts
+- [x] **Added:** `--motion-*` duration tokens, zeroed under
+      `prefers-reduced-motion`. [04-UIUX-SPEC §7](04-UIUX-SPEC.md) forbids
+      `!important`, and tokens are how you honour reduced motion without it.
 
 **Docs:** [04-UIUX-SPEC §§2–4](04-UIUX-SPEC.md)
 
@@ -102,16 +107,31 @@ pure cost.
 
 **Goal:** a genuine Notepad replacement.
 
-- [ ] Add modal per [04-UIUX-SPEC §4.7](04-UIUX-SPEC.md) — **dimension has no default**
-- [ ] `validateLocation()` implementing all errors E1–E7 from [05-DATA-SCHEMA §7](05-DATA-SCHEMA.md)
-- [ ] Y range hint updates the instant a dimension is selected (W1)
-- [ ] Edit reuses the same modal, prefilled
-- [ ] Delete with a confirm that **names the location** — not "Are you sure?"
-- [ ] Search box: live filter on name → tags → notes, in that priority order
-- [ ] Filter chips: dimension (single-select) + type (dropdown)
-- [ ] `save()` to `localStorage["blockbook.data"]` on every mutation, 400 ms debounce
-- [ ] `load()` on boot; fall back to seed when absent
-- [ ] Autofocus the search box on load
+- [x] Add modal per [04-UIUX-SPEC §4.7](04-UIUX-SPEC.md) — **dimension has no default**
+- [x] `validateLocation()` implementing all errors E1–E7 from [05-DATA-SCHEMA §7](05-DATA-SCHEMA.md)
+      — plus warnings W1, W3, W5, W6. W2 and W4 need portal maths and land in Phase 4;
+      `validateLocation` takes an `extraWarnings` argument as their injection point.
+- [x] Y range hint updates the instant a dimension is selected (W1)
+- [x] Edit reuses the same modal, prefilled
+- [x] Delete with a confirm that **names the location** — not "Are you sure?"
+- [x] Search box: live filter on name → tags → notes, in that priority order
+- [x] Filter chips: dimension (single-select) + type (dropdown)
+- [x] `save()` to `localStorage["blockbook.data"]` on every mutation, 400 ms debounce
+- [x] `load()` on boot; fall back to seed when absent
+- [x] Autofocus the search box on load
+- [x] **Added:** corrupt-data quarantine and newer-schema refusal
+      ([02-TRD §8](02-TRD.md)). The error policy applies from the first storage
+      backend, not from Phase 10 — a bad parse must never cost the user data.
+- [x] **Added:** empty states ([04-UIUX-SPEC §6](04-UIUX-SPEC.md)) — reachable as
+      soon as filters exist, so they could not wait for Phase 7.
+
+**Decision recorded:** the draft holds coordinates and tags as **raw strings**, parsed
+only on demand. The modal re-renders each keystroke; writing back a parsed value made
+a lone `-` vanish before the digits arrived, so negative coordinates were untypable.
+
+**Decision recorded:** while a search query is active, relevance ordering overrides the
+sort control, which is disabled with a tooltip. [03-APP-FLOW §3](03-APP-FLOW.md)
+requires the best match first.
 
 **Docs:** [03-APP-FLOW §§3–4](03-APP-FLOW.md), [04-UIUX-SPEC §4.7](04-UIUX-SPEC.md), [05-DATA-SCHEMA §7](05-DATA-SCHEMA.md)
 
@@ -124,16 +144,25 @@ still there. Search "spawner" returns exactly 3 results.
 
 **Goal:** the feature that justifies the whole project.
 
-- [ ] `toNether(x, z)` and `toOverworld(x, z)` — **`{x, z}` only, no Y in the signature**
-- [ ] `Math.floor`, never `Math.trunc` — see [07-ALGORITHMS §2.2](07-ALGORITHMS.md)
-- [ ] Portals tab: live bidirectional converter, no Convert button
-- [ ] Permanent text under the converter: "Y is not converted."
-- [ ] Counterpart coordinate on every portal card
-- [ ] `findLinkConflicts()` per [07-ALGORITHMS §3](07-ALGORITHMS.md)
-- [ ] Live conflict warning in the Add form when `type == "portal"`
-- [ ] `linkHealth()` — **bidirectional**, per [07-ALGORITHMS §4](07-ALGORITHMS.md)
-- [ ] Badges ✅ / 🟡 / ❌ on portal cards; broken count in the status bar
-- [ ] Partner dropdown; setting it writes **both** sides of the link
+- [x] `toNether(x, z)` and `toOverworld(x, z)` — **`{x, z}` only, no Y in the signature**
+- [x] `Math.floor`, never `Math.trunc` — see [07-ALGORITHMS §2.2](07-ALGORITHMS.md)
+- [x] Portals tab: live bidirectional converter, no Convert button
+- [x] Permanent text under the converter: "Y is not converted."
+- [x] Counterpart coordinate on every portal card
+- [x] `findLinkConflicts()` per [07-ALGORITHMS §3](07-ALGORITHMS.md)
+- [x] Live conflict warning in the Add form when `type == "portal"`
+- [x] `linkHealth()` — **bidirectional**, per [07-ALGORITHMS §4](07-ALGORITHMS.md)
+- [x] Badges ✅ / 🟡 / ❌ on portal cards; broken count in the status bar
+- [x] Partner dropdown; setting it writes **both** sides of the link
+- [x] **Added:** `setPortalLink()`. Re-pairing a portal that already had a partner
+      left the *old* partner pointing at it one-sidedly; `repairPortalLinks` would
+      then "fix" that by flipping the new link back, an order-dependent tug of war.
+      `setPortalLink` unhooks both previous partners before writing the new pair.
+- [x] **Added:** W2 is suppressed for the portal you have actually declared as the
+      partner. A partner sitting inside the radius is the desired outcome, not a
+      conflict — warning about it would train the user to ignore the warning.
+- [x] **Added:** `tests/` — the four phase gates plus `run-all.mjs`. No framework
+      and no dependency; see [09-TESTING-QA §1.1](09-TESTING-QA.md).
 
 **Docs:** [07-ALGORITHMS](07-ALGORITHMS.md) — read the whole thing first
 
@@ -154,13 +183,30 @@ it is the one thing in this app that must be exactly right.
 
 **Goal:** portability. The app becomes safe to trust with real data.
 
-- [ ] Export → `blockbook-YYYY-MM-DD.json`, pretty-printed, 2-space indent
-- [ ] Import from file → validate `app` and `schemaVersion` before touching state
-- [ ] Merge vs Replace choice; Replace requires a second confirm
-- [ ] Notepad importer: textarea + the parser from [07-ALGORITHMS §6](07-ALGORITHMS.md)
-- [ ] **Review screen** per [04-UIUX-SPEC §4.9](04-UIUX-SPEC.md) — mandatory, no bypass
-- [ ] Import blocked while any checked row has an unset dimension
-- [ ] Copy `/tp x y z` per location; toast on success
+- [x] Export → `blockbook-YYYY-MM-DD.json`, pretty-printed, 2-space indent
+- [x] Import from file → validate `app` and `schemaVersion` before touching state
+- [x] Merge vs Replace choice; Replace requires a second confirm
+- [x] Notepad importer: textarea + the parser from [07-ALGORITHMS §6](07-ALGORITHMS.md)
+- [x] **Review screen** per [04-UIUX-SPEC §4.9](04-UIUX-SPEC.md) — mandatory, no bypass
+- [x] Import blocked while any checked row has an unset dimension
+- [x] Copy `/tp x y z` per location; toast on success — a `null` Y emits `~`
+      (the player's current height), never `0`
+- [x] **Added:** a Settings modal to host Export/Import. The gear button had
+      nowhere to go, and [03-APP-FLOW §10](03-APP-FLOW.md) puts Data there.
+      Display (theme, coordinate format) and About are included; Behaviour is
+      Tauri-only and waits for Phase 9.
+- [x] **Added:** `backupNow()` writes a snapshot before **every** bulk operation.
+      ADR-007 requires a backup before import; ADR-008's protocol otherwise waits
+      for Phase 10, but the import path needs it now.
+- [x] **Added:** a light `guessType()` from the label, always overridable in the
+      review table. It makes the review screen usable rather than 30 rows of "misc".
+
+**Deviation from [07-ALGORITHMS §6.3](07-ALGORITHMS.md), deliberate:** in
+`guessDimension` the Y-range test runs **before** the keyword test. It is the only
+rule that can be confident — the Nether is bedrock-capped at 0–127, so a Y outside
+that range makes "nether" impossible regardless of what the label says. The doc's
+keyword alternation was also written without a group, so `\b` bound only to the
+first and last alternatives; it is grouped now.
 
 **Docs:** [03-APP-FLOW §§7–8](03-APP-FLOW.md), [07-ALGORITHMS §6](07-ALGORITHMS.md)
 

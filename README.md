@@ -13,9 +13,10 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 
 | | |
 |---|---|
-| Current version | `v0.0` — documentation complete, no code yet |
-| Next milestone | `v0.1` — Phase 0–3 (see [Implementation Plan](docs/06-IMPLEMENTATION-PLAN.md)) |
-| First shippable | `v0.3` — browser app, fully usable, ~11 hrs |
+| Current version | `v0.2` — Phases 0–4 done. Coordinates + portal validator working. |
+| Next milestone | `v0.3` — Phases 5–6: import/export, brewing tab |
+| First shippable | `v0.3` — browser app, fully usable, then **use it for a week** |
+| Tests | `node tests/run-all.mjs` — 219 checks, no dependencies |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 
 ---
@@ -49,13 +50,13 @@ BlockBook/
 ├─ README.md                 <- you are here
 ├─ BUILD_PLAN.md             <- original source plan
 ├─ .gitignore
+├─ index.html                <- the entire app (v0.x)
 ├─ docs/                     <- all specification documents
+├─ tests/                    <- phase gates; `node tests/run-all.mjs`
 └─ data/
-   ├─ seed.json              <- the 14 real coordinates, pre-parsed
+   ├─ seed.json              <- the 15 real coordinates, pre-parsed
    └─ brewing.json           <- brewing reference data (verify before shipping)
 ```
-
-Application source (`index.html`, later `src/` and `src-tauri/`) arrives in Phase 0.
 
 ---
 

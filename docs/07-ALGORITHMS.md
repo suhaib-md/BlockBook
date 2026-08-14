@@ -376,16 +376,34 @@ a guess and always overridable.
 
 ```js
 function guessDimension({ y, label }) {
-  const l = label.toLowerCase();
-  if (/\bnether|fortress|bastion|wart|blaze|soul\b/.test(l)) return { d: "nether",    confident: false };
-  if (/\bend\b|ender|stronghold|dragon/.test(l))             return { d: "end",       confident: false };
-  if (y != null && (y < 0 || y > 127))                       return { d: "overworld", confident: true  };
+  const l = String(label ?? "").toLowerCase();
+
+  // The confident rule runs FIRST — see the note below.
+  if (y != null && Number.isFinite(y) && (y < 0 || y > 127)) {
+    return { d: "overworld", confident: true };
+  }
+  if (/\b(nether|fortress|bastion|wart|blaze|soul|ghast|piglin)\b/.test(l)) {
+    return { d: "nether", confident: false };
+  }
+  if (/\b(end|ender|stronghold|dragon|shulker|chorus)\b/.test(l)) {
+    return { d: "end", confident: false };
+  }
   return { d: null, confident: false };   // genuinely unknowable — force a choice
 }
 ```
 
 Only one rule is confident: a Y outside `0–127` **cannot** be the Nether, since the
 Nether is bedrock-capped at 127 and floored at 0. Everything else is a keyword guess.
+
+**Two corrections to the original ordering:**
+
+1. **The Y test runs before the keyword test.** An earlier draft checked keywords
+   first, so `nether hub 42/200/17` was guessed as Nether — but Y 200 makes that
+   physically impossible. The confident rule must win over the speculative one.
+2. **The keyword alternations are grouped.** Written as
+   `/\bnether|fortress|…|soul\b/`, the `\b` binds only to the first and last
+   alternatives, so the middle terms matched inside longer words. `/\b(…)\b/` is
+   correct.
 
 Returning `null` is the correct answer far more often than it feels like it should be.
 Do not reach for a default.

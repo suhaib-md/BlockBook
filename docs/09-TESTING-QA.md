@@ -23,6 +23,29 @@ wrong answers are plausible-looking numbers. It gets real assertions.
 
 ---
 
+### 1.1 The gate harness
+
+The gates are automated, without adding a test framework or a dependency (ADR-009
+still holds — there is no runner, no config, no `package.json`).
+
+```
+node tests/run-all.mjs          # summary of every gate
+node tests/run-all.mjs -v       # every individual check
+node tests/phase4-gate.mjs index.html    # one gate, full output
+```
+
+Each gate reads `index.html`, evaluates its `<script>` in a Node `vm` with a minimal
+DOM and `localStorage` stub, and asserts against **the real functions the app runs**.
+Nothing is reimplemented, so the assertions cannot drift from a copy of the logic.
+That is what the `BLOCKBOOK LOGIC START/END` fence in `index.html` is for, and one
+gate check fails if anything inside that fence ever touches `document`, `state`,
+`window`, or `localStorage`.
+
+The console-pasteable form below still works and is the canonical statement of the
+golden cases — run it in DevTools when you want to check the live page.
+
+---
+
 ## 2. Golden cases — portal maths ⭐
 
 Paste this into the browser console at the end of Phase 4. **Every line must print
