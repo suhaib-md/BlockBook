@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "BlockBook",
         "width": 900,
         "height": 640,
@@ -20,7 +21,8 @@
         "resizable": true,
         "center": true,
         "decorations": true,
-        "alwaysOnTop": false
+        "alwaysOnTop": true,
+        "skipTaskbar": false
       }
     ],
     "security": {

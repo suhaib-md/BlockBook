@@ -7,6 +7,7 @@ import { esc } from "./util.js";
 import { blankDraft, buildImportRows, draftFrom, draftToLocation, exportFilename, pushRecent, tpCommand, validateImportPayload, validateLocation } from "./locations.js";
 import { activeLocations, commitJsonImport, commitLocation, commitTextImport, deleteLocation, exportPayload, loadData, refSlice, save, setSaveStatusListener, state, toggleFavorite } from "./store.js";
 import { $, TABS, renderBanner, renderModal, renderPanel, renderStatusBar, renderTabs, renderToast, renderToolbar } from "./views.js";
+import { copyText, hideWindow, isDesktop, onWindowShown, setAlwaysOnTop } from "./desktop.js";
 
 let toastTimer = null;
 
@@ -102,23 +103,6 @@ function closeModal() {
 }
 
 /* ---- export / import plumbing ---- */
-
-function copyText(text) {
-  if (navigator?.clipboard?.writeText) {
-    return navigator.clipboard.writeText(text).then(() => true, () => false);
-  }
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return Promise.resolve(ok);
-  } catch { return Promise.resolve(false); }
-}
 
 function doExport() {
   const text = exportPayload();
@@ -369,6 +353,13 @@ document.addEventListener("change", (e) => {
   if (e.target.dataset?.imp)         { onReviewInput(e.target); return; }
   if (e.target.id === "s-theme")     { state.data.settings.theme = e.target.value; save(); render(); return; }
   if (e.target.id === "s-coord")     { state.data.settings.coordFormat = e.target.value; save(); render(); return; }
+  if (e.target.id === "s-aot") {
+    state.data.settings.alwaysOnTop = e.target.checked;
+    setAlwaysOnTop(e.target.checked);
+    save();
+    render();
+    return;
+  }
   if (e.target.id === "file-input") {
     const f = e.target.files?.[0];
     e.target.value = "";                    // allow re-picking the same file
@@ -455,14 +446,16 @@ document.addEventListener("keydown", (e) => {
     return;                       // nothing below applies while a modal is open
   }
 
-  // ---- Esc cascade: modal -> search -> (window hide, Tauri only) ----
+  // ---- Esc cascade: modal -> search -> hide window. docs/03-APP-FLOW.md §11 ----
   if (e.key === "Escape") {
     if (state.ui.search) {
       state.ui.search = "";
       render();
       $("search")?.focus();
+    } else if (isDesktop()) {
+      hideWindow();                       // third stage: back to the tray
     } else {
-      document.activeElement?.blur?.();   // Phase 9 turns this into hide-to-tray
+      document.activeElement?.blur?.();   // a browser tab cannot hide itself
     }
     return;
   }
@@ -559,6 +552,17 @@ async function loadSeedLocations() {
 
   render();
   $("search")?.focus();   // docs/03-APP-FLOW.md §2.1 — hard requirement
+
+  // Apply the persisted always-on-top preference to the real window.
+  setAlwaysOnTop(state.data?.settings?.alwaysOnTop ?? true);
+
+  // Ctrl+Space / tray summon: Rust raises the window, we focus the search box
+  // and SELECT its contents so the next keystroke replaces the old query while
+  // Esc still restores it. docs/03-APP-FLOW.md §2.2
+  onWindowShown(() => {
+    const box = $("search");
+    if (box) { box.focus(); box.select?.(); }
+  });
 
   console.log("%cBlockBook v0.3", "font-weight:bold");
   console.log(`locations: ${activeLocations().length}`);

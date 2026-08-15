@@ -23,7 +23,7 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 | 7 | Polish | 1.5 h | — | ☑ |
 | — | **🛑 USE IT FOR A WEEK** | 7 days | — | ☐ |
 | 8 | Tauri wrap | 3 h | — | ☑ exe built &amp; launches · your visual pass pending |
-| 9 | Overlay behaviour | 2 h | — | ☐ |
+| 9 | Overlay behaviour | 2 h | — | ☑ built &amp; close-to-tray verified · hotkey needs your test |
 | 10 | File storage + backups | 2 h | **v1.0** | ☐ |
 | 11 | Xaero's integration | 3 h | **v1.1** | ☐ |
 | 12 | More reference tabs | 2 h each | **v1.2** | ☐ |
@@ -341,19 +341,48 @@ you must be able to tell which change did it.
 
 **Goal:** usable *during* play.
 
-- [ ] `alwaysOnTop: true` in `tauri.conf.json` + a Settings toggle
-- [ ] `plugin-global-shortcut`: `Ctrl+Space` toggles show/hide
-- [ ] On show: raise, focus the search box, **select** existing text (don't clear it)
-- [ ] Tray icon: Show · Hide · Quit
-- [ ] Close `[X]` hides to tray instead of quitting
-- [ ] `plugin-clipboard-manager` for the `/tp` button
-- [ ] Persist and restore window position and size
-- [ ] Optional: compact mode, 420×520, search + results only
+- [x] `alwaysOnTop: true` in `tauri.conf.json` + a Settings toggle
+- [x] `plugin-global-shortcut`: `Ctrl+Space` toggles show/hide
+- [x] On show: raise, unminimise, focus the search box, **select** existing text
+- [x] Tray icon: Show · Hide · Quit, plus left-click to toggle
+- [x] Close `[X]` hides to tray instead of quitting
+- [x] `plugin-clipboard-manager` for the `/tp` button
+- [x] Persist and restore window position and size (`plugin-window-state`)
+- [ ] Optional: compact mode, 420×520 — **skipped**, revisit after a week of use
+      (ADR-014's logic: build it if the week says it is needed, not before)
+
+**Added:** `src/desktop.js` — the single module allowed to know Tauri exists. Every
+entry point works in three environments and never throws in any: the exe, a plain
+browser (`npm run dev`), and Node under the gates. Tauri modules load via **dynamic
+`import()` inside a guard**; a static import would break the browser build and all
+nine gates. A gate check greps every other module to prove none references
+`@tauri-apps` directly.
+
+**Added:** `src-tauri/capabilities/default.json`, deliberately narrow — window
+show/hide/focus/always-on-top, clipboard write, global shortcut, event listen.
+A gate check asserts it grants **no** `http:`, `shell:` or `fs:` permission, so
+P1 (offline-always) and "no filesystem until Phase 10" are enforced, not just intended.
+
+**Hotkey registration failure is handled, not unwrapped.** Another app may already own
+`Ctrl+Space`; if so BlockBook logs it and carries on — the tray and window still work.
+An `.unwrap()` there would have made a common conflict a startup crash.
+
+**Compile error worth recording:** `.emit()` on a window needs `tauri::Emitter` in
+scope in Tauri 2. It is a trait, so nothing names it directly and its absence reads as
+"no method named `emit`".
 
 **Docs:** [03-APP-FLOW §2.2](03-APP-FLOW.md)
 
 **✅ Done when:** Minecraft is running borderless-windowed; `Ctrl+Space`, type
 "spawner", read the coordinate — and the game never minimises.
+
+**Verified on the real exe:** builds (3.46 MB), launches, and a `WM_CLOSE` leaves the
+process alive with the window hidden — close-to-tray genuinely works rather than
+merely being asserted from source.
+
+**Not verifiable here, yours to check:** the global hotkey firing over a running game,
+the tray menu items, and window position surviving a restart. Those need a human and a
+running Minecraft.
 
 **Watch out for:** global hotkeys **do not reach the app in exclusive fullscreen**.
 There is no fix. Document it in the README, in Settings → About, and in the first-run

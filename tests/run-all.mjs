@@ -27,6 +27,7 @@ const GATES = [
   ["6", "Brewing tab + generic reftable"],
   ["7", "Keyboard, favourites, recently viewed"],
   ["8", "Module split + Tauri scaffold"],
+  ["9", "Overlay: hotkey, tray, always-on-top"],
 ];
 
 let total = 0, failed = 0;

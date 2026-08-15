@@ -13,9 +13,9 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 
 | | |
 |---|---|
-| Current version | **`v0.3`** — Phases 0–8. Modular source, Vite build, Tauri scaffold. |
-| Next milestone | `v1.0` — Phases 9–10: global hotkey, tray, portable `data.json` |
-| Tests | `npm test` — 571 checks, zero dependencies |
+| Current version | **`v0.3`** — Phases 0–9. Native exe with `Ctrl+Space` summon, tray, always-on-top. |
+| Next milestone | `v1.0` — Phase 10: portable `data.json`, atomic writes, rolling backups |
+| Tests | `npm test` — 652 checks, zero dependencies |
 | Reminder | Brewing durations verified for **1.21**. Set `verified: false` in `data/brewing.json` **and** the inline copy after any game update. |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 

@@ -514,6 +514,17 @@ function settingsModalHTML() {
             </select>
           </div>
 
+          <div class="section-label" style="margin-top:var(--s-4)">Behaviour</div>
+          <div class="field checkline">
+            <input type="checkbox" id="s-aot"${s.alwaysOnTop ? " checked" : ""}>
+            <label for="s-aot" style="margin:0">Always on top</label>
+          </div>
+          <p class="hint" style="margin-top:0">
+            Keeps BlockBook above Minecraft. Press <kbd>${esc(s.hotkey)}</kbd> to summon
+            or dismiss it; closing the window hides it to the system tray rather than
+            quitting. Quit from the tray menu.
+          </p>
+
           <div class="section-label" style="margin-top:var(--s-4)">Data</div>
           <p class="hint" style="margin-top:0">
             ${locs.length} locations. Stored in this browser under

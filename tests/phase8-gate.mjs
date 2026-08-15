@@ -10,7 +10,10 @@ const { check, eq, done } = makeChecker();
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
 const has  = (p) => existsSync(join(ROOT, p));
 
-const MODULES = ["util", "schema", "portals", "reftable", "locations", "brewing", "store", "views", "main"];
+// desktop.js (Phase 9) sits just below main: it imports nothing from the app,
+// but it is not a "pure leaf" — it is the one module allowed to touch Tauri.
+const MODULES = ["util", "schema", "portals", "reftable", "locations", "brewing",
+                 "store", "views", "desktop", "main"];
 
 console.log("=== module layout (docs/02-TRD.md §4, §8) ===");
 for (const m of MODULES) check(has(`src/${m}.js`), `src/${m}.js exists`);
@@ -130,13 +133,13 @@ for (const i of ["32x32.png", "128x128.png", "128x128@2x.png", "icon.ico", "icon
   check(has(`src-tauri/icons/${i}`), `icons/${i}`);
 }
 
-console.log("\n=== Rust side is Phase 8 scope only ===");
+console.log("\n=== Rust side ===");
 const lib = read("src-tauri/src/lib.rs");
 check(/tauri::Builder::default\(\)/.test(lib), "lib.rs builds a Tauri app");
-// Strip Rust comments — the doc comment explains what is deferred, which is
-// not the same as the code doing it.
+// Strip Rust comments — a doc comment explaining what is deferred is not the
+// same as the code doing it.
 const libCode = lib.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/.*$/gm, " ");
-check(!/global_shortcut|tray|TrayIcon/i.test(libCode), "no hotkey/tray yet — that is Phase 9");
+// Hotkey/tray moved in at Phase 9 and are asserted there. Storage is Phase 10.
 check(!/plugin_fs|plugin-fs/i.test(libCode), "no filesystem plugin yet — that is Phase 10");
 check(/windows_subsystem = "windows"/.test(read("src-tauri/src/main.rs")), "release build hides the console window");
 
