@@ -195,7 +195,7 @@ and `type: "portal"` may exist (an end portal / gateway) but must never carry a
   "activeWorldId": "w_main",
   "coordFormat": "x / y / z",
   "alwaysOnTop": true,
-  "hotkey": "Ctrl+Space",
+  "hotkey": "CmdOrCtrl+Shift+B",
   "theme": "dark"
 }
 ```
@@ -205,7 +205,7 @@ and `type: "portal"` may exist (an end portal / gateway) but must never carry a
 | `activeWorldId` | string | `"w_main"` | Must match a `World.id`. Falls back to `worlds[0]` if stale. |
 | `coordFormat` | string | `"x / y / z"` | Also `"x, y, z"` and `"x y z"`. Display only — storage is always three integers. |
 | `alwaysOnTop` | boolean | `true` | Tauri only; ignored in the browser. |
-| `hotkey` | string | `"Ctrl+Space"` | Tauri global-shortcut syntax. Tauri only. |
+| `hotkey` | string | `"CmdOrCtrl+Shift+B"` | Tauri global-shortcut syntax. Tauri only. |
 | `theme` | `"dark"` \| `"light"` | `"dark"` | |
 
 UI state — search text, active filters, sort order, the active tab — is **never**
@@ -371,7 +371,7 @@ A minimal but fully valid `data.json` with one linked portal pair:
     "activeWorldId": "w_main",
     "coordFormat": "x / y / z",
     "alwaysOnTop": true,
-    "hotkey": "Ctrl+Space",
+    "hotkey": "CmdOrCtrl+Shift+B",
     "theme": "dark"
   }
 }

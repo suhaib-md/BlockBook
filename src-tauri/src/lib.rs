@@ -91,6 +91,34 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/**
+Register (or clear) the summon hotkey at runtime.
+
+The frontend owns the setting, so nothing is registered at startup — the
+webview calls this on boot with the persisted value. That keeps one source of
+truth and lets the user change the combo without a rebuild.
+
+Returns an error string rather than panicking: the combo may already be owned
+by another application, and that must not take the app down.
+*/
+#[cfg(desktop)]
+#[tauri::command]
+fn apply_hotkey(app: tauri::AppHandle, accelerator: Option<String>) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::GlobalShortcutExt;
+
+    let gs = app.global_shortcut();
+    // Always clear first: this is a "set to exactly this" operation, and
+    // leaving the previous binding registered is how you end up with two.
+    let _ = gs.unregister_all();
+
+    match accelerator.as_deref().map(str::trim) {
+        None | Some("") => Ok(()), // deliberately disabled
+        Some(acc) => gs.register(acc).map_err(|e| {
+            format!("Could not register \"{acc}\": {e}. Another application may already use it.")
+        }),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default().plugin(tauri_plugin_clipboard_manager::init());
@@ -100,6 +128,7 @@ pub fn run() {
         use tauri_plugin_global_shortcut::ShortcutState;
 
         builder = builder
+            .invoke_handler(tauri::generate_handler![apply_hotkey])
             // Restores the window position and size from the previous launch.
             .plugin(tauri_plugin_window_state::Builder::default().build())
             .plugin(
@@ -118,15 +147,10 @@ pub fn run() {
         .setup(|app| {
             #[cfg(desktop)]
             {
-                use tauri_plugin_global_shortcut::GlobalShortcutExt;
-
-                // Registration can fail if another app already owns the combo.
-                // That is not fatal: the tray and the window still work.
-                if let Err(e) = app.global_shortcut().register("CmdOrCtrl+Space") {
-                    eprintln!("BlockBook: could not register Ctrl+Space ({e}). \
-                               Another application may already use it.");
-                }
-
+                // No hotkey is registered here on purpose. The frontend owns the
+                // setting and calls apply_hotkey() once it has loaded it, so a
+                // stale default can never fire — which is exactly how the old
+                // Ctrl+Space kept stealing sprint-jump.
                 build_tray(app.handle())?;
             }
             Ok(())

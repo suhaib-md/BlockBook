@@ -240,7 +240,11 @@ All six [PRD §6.1](01-PRD.md) success criteria, plus:
 - [ ] Idle RAM < 60 MB (Task Manager, 60 s idle)
 - [ ] Cold start < 1.5 s
 - [ ] Installed size < 20 MB
-- [ ] `Ctrl+Space` works over borderless Minecraft
+- [ ] The summon hotkey works over borderless Minecraft
+- [ ] **and does not fire during normal play** — hold sprint, jump, sneak, open the
+      inventory, chat. None of it may summon the app. See
+      [10-DECISIONS ADR-015](10-DECISIONS-AND-RISKS.md): the original `Ctrl+Space`
+      default *was* sprint-jump.
 - [ ] Exclusive-fullscreen caveat documented in README **and** Settings → About
 - [ ] Close `[X]` hides to tray; tray Quit exits
 - [ ] Storage path visible and copyable in Settings

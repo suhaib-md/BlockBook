@@ -89,10 +89,32 @@ async function onWindowShown(fn) {
   } catch { return () => {}; }
 }
 
+/**
+ * Set the global summon hotkey, or clear it when `accelerator` is empty.
+ *
+ * Nothing is registered natively at startup — this is the single point where a
+ * hotkey comes into existence, driven by the persisted setting. Returns a
+ * result object rather than throwing: a combo already owned by another app is
+ * a message to show, not a crash.
+ *
+ * @returns {Promise<{ok: boolean, reason?: string}>}
+ */
+async function applyHotkey(accelerator) {
+  if (!isDesktop()) return { ok: false, reason: "not-desktop" };
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("apply_hotkey", { accelerator: accelerator || null });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: String(err?.message ?? err) };
+  }
+}
+
 export {
   isDesktop,
   copyText,
   hideWindow,
   setAlwaysOnTop,
   onWindowShown,
+  applyHotkey,
 };

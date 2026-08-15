@@ -49,7 +49,7 @@ These five constraints decide most arguments before they start.
 | Plugin | Purpose | Introduced in |
 |---|---|---|
 | `@tauri-apps/plugin-fs` | Read/write `data.json`, backups | Phase 10 |
-| `@tauri-apps/plugin-global-shortcut` | `Ctrl+Space` summon | Phase 9 |
+| `@tauri-apps/plugin-global-shortcut` | `Ctrl+Shift+B` summon | Phase 9 |
 | `@tauri-apps/plugin-clipboard-manager` | Copy `/tp` commands | Phase 9 |
 | `@tauri-apps/plugin-dialog` | Import/export file pickers | Phase 10 |
 | `@tauri-apps/plugin-opener` | Open wiki links in the system browser | Phase 12 |
@@ -106,7 +106,7 @@ Scaffold: `npm create tauri-app@latest` → choose vanilla JS.
 │  ┌───────────────────▼────────────────────────────────┐  │
 │  │  Rust core (src-tauri/src/main.rs)                 │  │
 │  │  • window: always-on-top, position memory          │  │
-│  │  • global shortcut: Ctrl+Space toggle              │  │
+│  │  • global shortcut: Ctrl+Shift+B toggle              │  │
 │  │  • tray: Show / Hide / Quit                        │  │
 │  │  • close → hide, not quit                          │  │
 │  └───────────────────┬────────────────────────────────┘  │

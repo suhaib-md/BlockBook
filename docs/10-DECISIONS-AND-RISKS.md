@@ -237,6 +237,42 @@ Enforced by a gate: if a new tab needs renderer changes, fix the renderer, not t
 
 ---
 
+## ADR-015 — The summon hotkey must not be a game control
+
+**Status:** Accepted · **Phase:** 9 · **Supersedes** the `Ctrl+Space` default named
+throughout the original plan
+
+**Context.** Every document specified `Ctrl+Space` as the summon hotkey. In Minecraft,
+**Ctrl is sprint and Space is jump** — so `Ctrl+Space` is *sprint-jump*, one of the
+most frequent inputs in the game. Shipped, it summoned the app and stole focus from
+the game on almost every jump, making it actively unusable during play. This was
+caught by playing, not by any gate.
+
+**Decision.**
+
+1. The default becomes **`Ctrl+Shift+B`** — three keys, and `B` is unbound in vanilla.
+2. The hotkey is **user-configurable** in Settings, from a preset list where every
+   option avoids Minecraft's default controls.
+3. It can be **disabled entirely**, leaving the tray icon as the way in.
+4. Nothing is registered natively at startup. The frontend owns the setting and calls
+   `apply_hotkey` after loading it, so no hard-coded default can ever fire.
+5. Saved settings containing a known-unsafe combo are **migrated on load**, with a
+   banner saying why. Fixing only the default would never have reached an existing
+   install — the bad value was already persisted.
+
+**Consequences.** A three-key default is slightly less convenient to press and less
+guessable, which is the correct trade against firing during combat. The preset list
+is enforced by a gate check that rejects any option binding a Minecraft control key
+(`Space`, `Shift`, `Tab`, `W/A/S/D/E/Q/T/F`, …) or any single-key combo that is not an
+unbound function key.
+
+**The general lesson.** This app runs *alongside* a program that owns the keyboard.
+Any global input it claims must be checked against that program's bindings first.
+The original spec chose a hotkey on ergonomics alone and never asked what the game
+already used it for.
+
+---
+
 ## ADR-014 — Mandatory one-week pause after v0.3
 
 **Status:** Accepted · **Phase:** between 6 and 7

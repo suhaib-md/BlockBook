@@ -13,9 +13,9 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 
 | | |
 |---|---|
-| Current version | **`v0.3`** — Phases 0–9. Native exe with `Ctrl+Space` summon, tray, always-on-top. |
+| Current version | **`v0.3`** — Phases 0–9. Native exe, configurable summon hotkey, tray, always-on-top. |
 | Next milestone | `v1.0` — Phase 10: portable `data.json`, atomic writes, rolling backups |
-| Tests | `npm test` — 652 checks, zero dependencies |
+| Tests | `npm test` — 677 checks, zero dependencies |
 | Reminder | Brewing durations verified for **1.21**. Set `verified: false` in `data/brewing.json` **and** the inline copy after any game update. |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 
@@ -79,7 +79,7 @@ Module dependencies run one way only, and a gate check enforces it — see
 ```powershell
 npm install
 npm run dev          # Vite dev server on http://localhost:1420
-npm test             # all phase gates, 571 checks
+npm test             # all phase gates, 677 checks
 
 npm run tauri dev    # native window (needs Rust + MSVC Build Tools)
 npm run tauri build  # .exe + installer
@@ -98,6 +98,10 @@ npm run tauri build  # .exe + installer
 
 - **Global hotkeys do not reach the app when Minecraft is in exclusive fullscreen.**
   Set Minecraft to Windowed or Borderless.
+- **The summon hotkey must not collide with a game control.** The default is
+  `Ctrl+Shift+B`; change it in Settings, or disable it and use the tray icon.
+  Avoid anything built from Minecraft's own keys — `Ctrl+Space` is sprint-jump and
+  will fire constantly ([ADR-015](docs/10-DECISIONS-AND-RISKS.md)).
 - Brewing durations shift between game versions. Spot-check `data/brewing.json`
   against minecraft.wiki for your version before trusting it.
 - Xaero's waypoint file format has changed across mod versions. Never write to a

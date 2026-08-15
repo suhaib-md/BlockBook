@@ -30,7 +30,7 @@ const GATES = [
   ["9", "Overlay: hotkey, tray, always-on-top"],
 ];
 
-let total = 0, failed = 0;
+let total = 0, failed = 0, brokenGates = 0;
 
 for (const [n, label] of GATES) {
   const r = spawnSync(process.execPath, [join(here, `phase${n}-gate.mjs`)], { encoding: "utf8" });
@@ -41,13 +41,20 @@ for (const [n, label] of GATES) {
   failed += fails;
 
   const ok = r.status === 0;
-  console.log(`${ok ? "  ok" : "FAIL"}  Phase ${n} — ${label}  (${passes} checks${fails ? `, ${fails} FAILED` : ""})`);
+  // A gate that CRASHES produces no FAIL lines. Counting only those would let a
+  // crash print "ALL GATES PASSED" — silence must never read as success.
+  if (!ok) brokenGates++;
+
+  console.log(`${ok ? "  ok" : "FAIL"}  Phase ${n} — ${label}  (${passes} checks${fails ? `, ${fails} FAILED` : ""}${!ok && fails === 0 ? ", CRASHED" : ""})`);
   if (verbose) console.log(out.replace(/^/gm, "        "));
   else if (!ok) console.log(out.split("\n").filter(l => /^FAIL|Error|at /.test(l)).map(l => "        " + l).join("\n"));
 }
 
 console.log("─".repeat(60));
-console.log(failed === 0
-  ? `ALL GATES PASSED — ${total} checks`
-  : `${failed} CHECK(S) FAILED across ${total + failed} checks`);
-process.exit(failed === 0 ? 0 : 1);
+if (brokenGates === 0) {
+  console.log(`ALL GATES PASSED — ${total} checks`);
+} else {
+  const detail = failed > 0 ? `${failed} check(s) failed` : "no check failed — a gate crashed before finishing";
+  console.log(`${brokenGates} GATE(S) NOT PASSING — ${detail}`);
+}
+process.exit(brokenGates === 0 ? 0 : 1);

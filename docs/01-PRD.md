@@ -1,4 +1,4 @@
-﻿# 01 — Product Requirements Document
+# 01 — Product Requirements Document
 
 **Product:** BlockBook · **Version:** 1.0 · **Date:** 2026-08-14 · **Status:** Approved
 
@@ -104,7 +104,7 @@ system, no permissions model, no empty-state tutorials beyond one line of text.
 | F16 | **Reverse ingredient lookup** | "I have Magma Cream — what can I brew?" |
 | F17 | **Native app** | Runs as a Windows `.exe` via Tauri. No browser required. |
 | F18 | **Always-on-top** | Toggleable. Default on. |
-| F19 | **Global hotkey** | `Ctrl+Space` shows/hides the window from anywhere. |
+| F19 | **Global hotkey** | `Ctrl+Shift+B` shows/hides the window from anywhere. |
 | F20 | **System tray** | Show / Hide / Quit. Close button minimises rather than quits. |
 | F21 | **Portable file storage** | `data.json` beside the exe; app data dir as fallback. |
 | F22 | **Atomic writes + rolling backups** | Temp-file-then-rename. Last 20 backups retained. |
@@ -155,7 +155,7 @@ All six must pass. These are the contract.
 | S2 | Typing an Overworld coordinate instantly shows the Nether counterpart. | Type `2217 / -4024` → app shows `277 / -503` with no button press. |
 | S3 | The app warns before building a portal that will link to the wrong existing portal. | Enter a portal at Overworld `631 / 245` → amber warning naming "Home Portal (Nether side)" at ~63 blocks. |
 | S4 | The full brewing tree is browsable offline. | Disconnect the network. Answer "how do I make splash Fire Resistance" entirely inside the app. |
-| S5 | `Ctrl+Space` summons the app over borderless-windowed Minecraft. | Game running borderless. Hotkey. Type "spawner". Read a coordinate. Game never minimises. |
+| S5 | `Ctrl+Shift+B` summons the app over borderless-windowed Minecraft. | Game running borderless. Hotkey. Type "spawner". Read a coordinate. Game never minimises. |
 | S6 | Copying one folder to another PC restores everything. | Copy folder to USB, run the exe on a second machine, all locations present. |
 
 ### 6.2 Quality bars

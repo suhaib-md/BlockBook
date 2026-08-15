@@ -7,7 +7,7 @@ import { esc } from "./util.js";
 import { blankDraft, buildImportRows, draftFrom, draftToLocation, exportFilename, pushRecent, tpCommand, validateImportPayload, validateLocation } from "./locations.js";
 import { activeLocations, commitJsonImport, commitLocation, commitTextImport, deleteLocation, exportPayload, loadData, refSlice, save, setSaveStatusListener, state, toggleFavorite } from "./store.js";
 import { $, TABS, renderBanner, renderModal, renderPanel, renderStatusBar, renderTabs, renderToast, renderToolbar } from "./views.js";
-import { copyText, hideWindow, isDesktop, onWindowShown, setAlwaysOnTop } from "./desktop.js";
+import { applyHotkey, copyText, hideWindow, isDesktop, onWindowShown, setAlwaysOnTop } from "./desktop.js";
 
 let toastTimer = null;
 
@@ -54,6 +54,28 @@ function render() {
    EVENTS
    Delegated from the document so a full re-render never orphans a listener.
    ========================================================================== */
+
+/**
+ * Push the hotkey setting to the OS and report honestly if it did not take.
+ * A combo owned by another app must surface as a visible message, not silence —
+ * otherwise the user presses it, nothing happens, and there is no clue why.
+ */
+async function registerHotkey(accelerator, { announce = false } = {}) {
+  const res = await applyHotkey(accelerator);
+  if (!isDesktop()) return;
+
+  if (res.ok) {
+    state.notice = null;
+    if (announce) {
+      toast(accelerator
+        ? `Summon hotkey set to ${accelerator.replace("CmdOrCtrl", "Ctrl")}`
+        : "Summon hotkey disabled — use the tray icon.");
+    }
+  } else {
+    state.notice = { kind: "error", text: esc(res.reason) };
+  }
+  render();
+}
 
 /** Record that a location was actually looked at. */
 function noteViewed(id) {
@@ -360,6 +382,13 @@ document.addEventListener("change", (e) => {
     render();
     return;
   }
+  if (e.target.id === "s-hotkey") {
+    state.data.settings.hotkey = e.target.value;
+    save();
+    registerHotkey(e.target.value, { announce: true });
+    render();
+    return;
+  }
   if (e.target.id === "file-input") {
     const f = e.target.files?.[0];
     e.target.value = "";                    // allow re-picking the same file
@@ -555,6 +584,11 @@ async function loadSeedLocations() {
 
   // Apply the persisted always-on-top preference to the real window.
   setAlwaysOnTop(state.data?.settings?.alwaysOnTop ?? true);
+
+  // Nothing is registered natively at startup, so this is what brings the
+  // summon hotkey into existence — from the saved setting, never a hard-coded
+  // default that could fight the game.
+  registerHotkey(state.data?.settings?.hotkey ?? "");
 
   // Ctrl+Space / tray summon: Rust raises the window, we focus the search box
   // and SELECT its contents so the next keystroke replaces the old query while

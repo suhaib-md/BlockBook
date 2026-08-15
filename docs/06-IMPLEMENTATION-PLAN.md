@@ -1,4 +1,4 @@
-﻿# 06 — Implementation Plan
+# 06 — Implementation Plan
 
 **Product:** BlockBook · **Date:** 2026-08-14
 
@@ -342,7 +342,7 @@ you must be able to tell which change did it.
 **Goal:** usable *during* play.
 
 - [x] `alwaysOnTop: true` in `tauri.conf.json` + a Settings toggle
-- [x] `plugin-global-shortcut`: `Ctrl+Space` toggles show/hide
+- [x] `plugin-global-shortcut`: `Ctrl+Shift+B` toggles show/hide
 - [x] On show: raise, unminimise, focus the search box, **select** existing text
 - [x] Tray icon: Show · Hide · Quit, plus left-click to toggle
 - [x] Close `[X]` hides to tray instead of quitting
@@ -364,7 +364,7 @@ A gate check asserts it grants **no** `http:`, `shell:` or `fs:` permission, so
 P1 (offline-always) and "no filesystem until Phase 10" are enforced, not just intended.
 
 **Hotkey registration failure is handled, not unwrapped.** Another app may already own
-`Ctrl+Space`; if so BlockBook logs it and carries on — the tray and window still work.
+`Ctrl+Shift+B`; if so BlockBook logs it and carries on — the tray and window still work.
 An `.unwrap()` there would have made a common conflict a startup crash.
 
 **Compile error worth recording:** `.emit()` on a window needs `tauri::Emitter` in
@@ -373,7 +373,7 @@ scope in Tauri 2. It is a trait, so nothing names it directly and its absence re
 
 **Docs:** [03-APP-FLOW §2.2](03-APP-FLOW.md)
 
-**✅ Done when:** Minecraft is running borderless-windowed; `Ctrl+Space`, type
+**✅ Done when:** Minecraft is running borderless-windowed; `Ctrl+Shift+B`, type
 "spawner", read the coordinate — and the game never minimises.
 
 **Verified on the real exe:** builds (3.46 MB), launches, and a `WM_CLOSE` leaves the

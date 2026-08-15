@@ -4,7 +4,7 @@
    ========================================================================== */
 
 import { esc } from "./util.js";
-import { DIMENSIONS, LOCATION_TYPES, SCHEMA_VERSION, Y_RANGES } from "./schema.js";
+import { DIMENSIONS, HOTKEY_OPTIONS, LOCATION_TYPES, SCHEMA_VERSION, Y_RANGES } from "./schema.js";
 import { LINK_RADIUS, brokenPairs, counterpart, destinationDimension, findLinkConflicts, fmtDist, linkHealth, portalWarnings, toNether, toOverworld } from "./portals.js";
 import { draftToLocation, tpCommand, validateLocation, visibleLocations } from "./locations.js";
 import { brewingPanelHTML } from "./brewing.js";
@@ -519,10 +519,27 @@ function settingsModalHTML() {
             <input type="checkbox" id="s-aot"${s.alwaysOnTop ? " checked" : ""}>
             <label for="s-aot" style="margin:0">Always on top</label>
           </div>
+
+          <div class="field">
+            <label for="s-hotkey">Summon hotkey</label>
+            <select id="s-hotkey">
+              ${HOTKEY_OPTIONS.map(o => `
+                <option value="${esc(o.value)}"${s.hotkey === o.value ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
+              ${HOTKEY_OPTIONS.some(o => o.value === s.hotkey) ? "" : `
+                <option value="${esc(s.hotkey)}" selected>${esc(s.hotkey)} (current)</option>`}
+            </select>
+            <div class="hint">
+              These all avoid Minecraft's default controls. Anything using
+              <kbd>Ctrl</kbd>+<kbd>Space</kbd> would fire every time you sprint-jump.
+            </div>
+          </div>
+
           <p class="hint" style="margin-top:0">
-            Keeps BlockBook above Minecraft. Press <kbd>${esc(s.hotkey)}</kbd> to summon
-            or dismiss it; closing the window hides it to the system tray rather than
-            quitting. Quit from the tray menu.
+            ${s.hotkey
+              ? `Press <kbd>${esc(s.hotkey.replace("CmdOrCtrl", "Ctrl"))}</kbd> to summon or dismiss BlockBook.`
+              : `The hotkey is disabled — use the tray icon to show the window.`}
+            Closing the window hides it to the system tray rather than quitting;
+            quit from the tray menu.
           </p>
 
           <div class="section-label" style="margin-top:var(--s-4)">Data</div>

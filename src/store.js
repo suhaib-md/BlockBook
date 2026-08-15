@@ -5,7 +5,7 @@
    ========================================================================== */
 
 import { esc } from "./util.js";
-import { DEFAULT_SETTINGS, DIMENSIONS, SCHEMA_VERSION, buildInitialData, normaliseLocation, repairPortalLinks } from "./schema.js";
+import { DEFAULT_SETTINGS, DIMENSIONS, SCHEMA_VERSION, UNSAFE_HOTKEYS, buildInitialData, normaliseLocation, repairPortalLinks } from "./schema.js";
 import { mergeLocations } from "./locations.js";
 
 let state = {
@@ -123,11 +123,22 @@ function loadData(seedLocations) {
   parsed.worlds[0].locations = locations;
   parsed.settings = { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) };
 
+  // The original Ctrl+Space default collided with Minecraft's sprint-jump, so
+  // every jump summoned the app. Saved settings keep the old value, which means
+  // fixing only the default would never reach an existing install.
+  const notices = [];
+  if (UNSAFE_HOTKEYS.has(parsed.settings.hotkey)) {
+    const old = parsed.settings.hotkey;
+    parsed.settings.hotkey = DEFAULT_SETTINGS.hotkey;
+    notices.push(`Summon hotkey changed from <code>${esc(old)}</code> to <code>${esc(DEFAULT_SETTINGS.hotkey)}</code> — the old one clashed with Minecraft's sprint-jump. Change it in Settings.`);
+  }
+  if (repairs.length) {
+    notices.push(`Repaired ${repairs.length} portal link(s) on load: ${esc(repairs.join("; "))}`);
+  }
+
   return {
     data: parsed,
-    notice: repairs.length
-      ? { kind: "info", text: `Repaired ${repairs.length} portal link(s) on load: ${esc(repairs.join("; "))}` }
-      : null,
+    notice: notices.length ? { kind: "info", text: notices.join(" ") } : null,
   };
 }
 

@@ -1,4 +1,4 @@
-﻿# 03 — App Flow
+# 03 — App Flow
 
 **Product:** BlockBook · **Version:** 1.0 · **Date:** 2026-08-14
 
@@ -70,7 +70,7 @@ read" — a click to focus the input would break the 3-second promise.
 ### 2.2 Warm summon (v1.0+)
 
 ```
-Ctrl+Space pressed anywhere
+Ctrl+Shift+B pressed anywhere
    │
    ├─ window hidden ──▶ show, raise, focus search, select existing search text
    └─ window visible ──▶ hide to tray
@@ -97,7 +97,7 @@ Window close in v0.x  ──▶ localStorage already written on every mutation
 Minecraft running (borderless windowed)
    │
    ▼
-[Ctrl+Space] ──────────────▶ window appears on top, search focused
+[Ctrl+Shift+B] ──────────────▶ window appears on top, search focused
    │
    ▼
 Type "spawn"  ─────────────▶ list filters live as each character lands
@@ -106,7 +106,7 @@ Type "spawn"  ─────────────▶ list filters live as ea
    ▼
 Read "Zombie Spawner A · 97 / -19 / 468"
    │
-   ├─ done ──────────────▶ [Ctrl+Space] hides the window
+   ├─ done ──────────────▶ [Ctrl+Shift+B] hides the window
    └─ want the tp cmd ───▶ [Enter] on the focused row copies `/tp 97 -19 468`
                              toast: "Copied"
 ```
@@ -362,7 +362,7 @@ Modal, four sections.
 | Section | Controls |
 |---|---|
 | **Display** | Theme (dark/light), coordinate format, always-on-top toggle |
-| **Behaviour** | Global hotkey (default `Ctrl+Space`), start minimised, close-to-tray |
+| **Behaviour** | Global hotkey (default `Ctrl+Shift+B`), start minimised, close-to-tray |
 | **Data** | Storage path (read-only, with "Open folder"), Export, Import, Backups list, "Reset to seed" (double-confirmed) |
 | **About** | Version, schema version, the exclusive-fullscreen caveat, link to the README |
 
@@ -375,7 +375,7 @@ require reading the docs.
 
 | Key | Action | Context |
 |---|---|---|
-| `Ctrl+Space` | Show / hide window | Global, OS-level (v1.0+) |
+| `Ctrl+Shift+B` | Show / hide window | Global, OS-level (v1.0+) |
 | `/` | Focus search | Any tab, when not already in an input |
 | `N` | New location | Coordinates tab |
 | `1` `2` `3` `4` | Switch tab | When not in an input |
@@ -395,9 +395,9 @@ modal is open is "close the modal", not "hide the app".
 
 ```
                     ┌──────────────┐
-                    │   HIDDEN     │ ◀──── Ctrl+Space / [X] / Esc(empty)
+                    │   HIDDEN     │ ◀──── Ctrl+Shift+B / [X] / Esc(empty)
                     └──────┬───────┘
-                           │ Ctrl+Space / tray Show
+                           │ Ctrl+Shift+B / tray Show
                            ▼
        ┌───────────────────────────────────────┐
        │            VISIBLE                    │

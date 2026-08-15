@@ -29,11 +29,42 @@ const Y_RANGES = {
   end:       [0, 255],
 };
 
+/**
+ * Summon hotkeys that do NOT collide with Minecraft's default controls.
+ *
+ * The original plan specified Ctrl+Space, which is a catastrophic choice:
+ * Ctrl is sprint and Space is jump, so sprint-jumping — one of the most
+ * frequent inputs in the game — summoned the app and stole focus every time.
+ *
+ * Minecraft's defaults to avoid: W A S D, Space, Shift, Ctrl, E, Q, T, Tab, F,
+ * 1-9, F1-F5, F11, Esc. Anything here must be awkward enough that no gameplay
+ * input produces it by accident, which in practice means three keys or an
+ * unbound function key.
+ */
+const HOTKEY_OPTIONS = [
+  { value: "CmdOrCtrl+Shift+B", label: "Ctrl + Shift + B  (default)" },
+  { value: "CmdOrCtrl+Alt+B",   label: "Ctrl + Alt + B" },
+  { value: "Alt+Shift+B",       label: "Alt + Shift + B" },
+  { value: "F8",                label: "F8  (unbound in vanilla)" },
+  { value: "F9",                label: "F9  (unbound in vanilla)" },
+  { value: "",                  label: "Disabled — use the tray icon" },
+];
+
+/**
+ * Hotkeys known to fight with the game. Anything found here in saved settings
+ * is migrated to the default on load, otherwise the fix never reaches an
+ * existing install.
+ */
+const UNSAFE_HOTKEYS = new Set([
+  "Ctrl+Space", "CmdOrCtrl+Space", "Control+Space",
+  "Ctrl+Shift+Space", "CmdOrCtrl+Shift+Space",   // Shift is sneak
+]);
+
 const DEFAULT_SETTINGS = {
   activeWorldId: "w_main",
   coordFormat:   "x / y / z",
   alwaysOnTop:   true,
-  hotkey:        "Ctrl+Space",
+  hotkey:        "CmdOrCtrl+Shift+B",
   theme:         "dark",
 };
 
@@ -174,6 +205,8 @@ const TYPE_DIMENSIONS = {
 };
 
 export {
+  HOTKEY_OPTIONS,
+  UNSAFE_HOTKEYS,
   SCHEMA_VERSION,
   LOCATION_FIELDS,
   DIMENSIONS,
