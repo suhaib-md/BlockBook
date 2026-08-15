@@ -19,7 +19,7 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 | 3 | CRUD + search + filter | 2 h | **v0.1** | ☑ |
 | 4 | Nether math + validator ⭐ | 1.5 h | **v0.2** | ☑ |
 | 5 | Import / export | 1.5 h | — | ☑ |
-| 6 | Brewing tab | 2 h | **v0.3** | ☐ |
+| 6 | Brewing tab | 2 h | **v0.3** | ◑ code done · durations unverified |
 | — | **🛑 USE IT FOR A WEEK** | 7 days | — | ☐ |
 | 7 | Polish | 1.5 h | — | ☐ |
 | 8 | Tauri wrap | 3 h | — | ☐ |
@@ -220,14 +220,29 @@ case produces **two separate rows**, not one pair.
 
 **Goal:** stop alt-tabbing to a wiki.
 
-- [ ] Verify `data/brewing.json` durations against minecraft.wiki for your exact game
-      version; then set `"verified": true`
-- [ ] Build `reftable.js` — the **generic** searchable/sortable table renderer.
-      It must contain zero brewing knowledge. Every future reference tab reuses it.
-- [ ] Potion list with search
-- [ ] Detail view: the full chain, rendered per [04-UIUX-SPEC §4.10](04-UIUX-SPEC.md)
-- [ ] Reverse lookup: "I have X, what can I brew?"
-- [ ] Modifier table + corruption table as a persistent sidebar
+- [ ] ⚠ **NOT DONE — yours to do.** Verify `data/brewing.json` durations against
+      minecraft.wiki for your exact game version; then set `"verified": true` in
+      **both** `data/brewing.json` and the inline `BREWING` copy in `index.html`.
+      This cannot be done without the wiki and your installed version number, so
+      the data ships `verified: false` and the UI says so in an amber banner.
+      The **graph** (what makes what) is exact vanilla and needs no checking; only
+      the **durations** drift between releases.
+- [x] Build `reftable` — the **generic** searchable/sortable table renderer.
+      Zero brewing knowledge; a gate check greps the function body for domain
+      vocabulary and fails if any appears.
+- [x] Potion list with search, sort, and a tag filter
+- [x] Detail view: the full chain, rendered per [04-UIUX-SPEC §4.10](04-UIUX-SPEC.md)
+- [x] Reverse lookup: "I have X, what can I brew?"
+- [x] Modifier table + corruption table as a persistent footer
+- [x] **Added:** splash and lingering durations are **computed** (×¾ and ×¼) rather
+      than stored, so they cannot drift out of step with the base duration.
+- [x] **Added:** the chain states its gaps explicitly — "Redstone Dust does nothing,
+      this potion cannot be extended" — rather than silently omitting the row.
+
+**Note on `reftable`:** the doc describes `renderRefTable(mount, cfg)`. Implemented as
+`refTableHTML(cfg, ui)` returning a string instead, so it composes with the single
+full-render path (ADR-002) rather than mounting imperatively. Per-table UI state lives
+in `state.ui.ref[id]`, which is how Phase 12 adds tabs without touching the renderer.
 
 **Docs:** [08-REFERENCE-DATA](08-REFERENCE-DATA.md), [03-APP-FLOW §9](03-APP-FLOW.md)
 

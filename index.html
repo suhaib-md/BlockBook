@@ -458,6 +458,93 @@
   .msg-list li.warn { color: var(--warn); }
   .checkline { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); color: var(--fg-1); }
 
+  /* ---- reftable — docs/08-REFERENCE-DATA.md §4 ---- */
+  .ref-controls {
+    display: flex; align-items: center; gap: var(--s-2);
+    margin-bottom: var(--s-3);
+  }
+  .ref-scroll { overflow-x: auto; }
+  table.ref { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+  table.ref th {
+    text-align: left; padding: 0; border-bottom: var(--border);
+  }
+  table.ref th .ref-sort,
+  table.ref th {
+    color: var(--fg-2); font-weight: 500;
+    font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .5px;
+  }
+  .ref-sort {
+    background: none; border: none; font: inherit; color: inherit;
+    padding: var(--s-1) var(--s-2); cursor: pointer; width: 100%; text-align: inherit;
+  }
+  .ref-sort:hover { color: var(--fg-0); }
+  table.ref td {
+    padding: var(--s-2);
+    border-bottom: 1px solid color-mix(in srgb, var(--bg-3) 50%, transparent);
+    vertical-align: top;
+  }
+  tr.ref-row { cursor: pointer; }
+  tr.ref-row:hover { background: var(--bg-1); }
+  tr.ref-row.is-selected { background: var(--bg-2); }
+  tr.ref-detail-row > td { background: var(--bg-1); padding: var(--s-3) var(--s-4); }
+  .pill {
+    display: inline-block;
+    font-size: var(--fs-xs); color: var(--fg-1);
+    background: var(--bg-2); border-radius: var(--r-sm);
+    padding: 1px 6px;
+  }
+
+  /* ---- brewing chain — docs/04-UIUX-SPEC.md §4.10 ---- */
+  .chain-spine { border-left: 2px solid var(--bg-3); padding-left: var(--s-3); }
+  .chain-step { margin-bottom: var(--s-2); }
+  .chain-from { color: var(--fg-1); }
+  .chain-add  { color: var(--info); font-size: var(--fs-sm); }
+  .chain-out  { color: var(--fg-0); font-weight: 600; }
+  .chain-dur  {
+    font-family: var(--font-mono); color: var(--fg-1);
+    font-weight: 400; margin-left: var(--s-2);
+  }
+  .chain-variants { margin-top: var(--s-3); }
+  .chain-variant {
+    display: flex; gap: var(--s-2); align-items: baseline; flex-wrap: wrap;
+    padding: var(--s-1) 0 var(--s-1) var(--s-3);
+    border-left: 2px solid transparent;
+    font-size: var(--fs-sm);
+  }
+  .chain-variant.extended  { border-left-color: var(--ok); }
+  .chain-variant.amplified { border-left-color: var(--info); }
+  .chain-variant.splash    { border-left-color: var(--warn); }
+  .chain-variant.lingering { border-left-color: var(--end); }
+  .chain-variant.corrupt   { border-left-color: var(--nether); }
+  .chain-meta { display: grid; grid-template-columns: auto 1fr; gap: var(--s-1) var(--s-3);
+                margin: var(--s-3) 0 0; font-size: var(--fs-sm); }
+  .chain-meta dt { color: var(--fg-2); }
+  .chain-meta dd { margin: 0; color: var(--fg-1); }
+
+  /* ---- reverse lookup + footer ---- */
+  .have { margin-top: var(--s-5); max-width: 640px; }
+  .rl-group { margin-top: var(--s-2); }
+  .rl-title { font-size: var(--fs-xs); color: var(--fg-2); text-transform: uppercase;
+              letter-spacing: .5px; margin-bottom: var(--s-1); }
+  .rl-hit {
+    display: block; width: 100%; text-align: left;
+    background: var(--bg-1); border: var(--border); border-radius: var(--r-sm);
+    color: var(--fg-0); font: inherit; font-size: var(--fs-sm);
+    padding: var(--s-1) var(--s-2); margin-bottom: var(--s-1); cursor: pointer;
+  }
+  .rl-hit:hover { background: var(--bg-2); }
+  .rl-hit.static { cursor: default; }
+  .rl-hit.static:hover { background: var(--bg-1); }
+
+  .brew-footer {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5);
+    margin-top: var(--s-5); padding-top: var(--s-3);
+    border-top: var(--border);
+  }
+  ul.kv { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); color: var(--fg-1); }
+  ul.kv li { padding: 2px 0; }
+  @media (max-width: 640px) { .brew-footer { grid-template-columns: 1fr; } }
+
   /* ---- import review table — docs/04-UIUX-SPEC.md §4.9 ---- */
   table.review {
     width: 100%;
@@ -1206,6 +1293,226 @@ function exportFilename(now = new Date()) {
   return `blockbook-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.json`;
 }
 
+/* --------------------------------------------------------------------------
+   REFTABLE — the ONE generic searchable/sortable table renderer.
+   docs/08-REFERENCE-DATA.md §4
+
+   ZERO DOMAIN KNOWLEDGE LIVES HERE. No potions, no enchantments, no mobs.
+   Everything arrives through `cfg`. Phase 12's gate is that a new reference tab
+   takes under two hours; if one ever needs this function changed, the function
+   is wrong, not the tab.
+
+   Returns HTML rather than mounting into an element, so it composes with the
+   single full-render path (ADR-002). renderRefTable() wraps it for the
+   mount-style signature the doc describes.
+   -------------------------------------------------------------------------- */
+
+/** Read a cell value, flattening arrays so search and sort treat them as text. */
+function refCell(row, key) {
+  const v = row[key];
+  return Array.isArray(v) ? v.join(" ") : (v ?? "");
+}
+
+function refSearch(rows, q, keys) {
+  const needle = String(q ?? "").trim().toLowerCase();
+  if (!needle) return [...rows];
+  return rows.filter(r =>
+    keys.some(k => String(refCell(r, k)).toLowerCase().includes(needle)));
+}
+
+function refFilter(rows, filters, active) {
+  return rows.filter(r => filters.every(f => {
+    const want = active?.[f.key];
+    if (!want) return true;
+    const v = r[f.key];
+    return Array.isArray(v) ? v.includes(want) : String(v ?? "") === want;
+  }));
+}
+
+function refSort(rows, key, dir) {
+  if (!key) return rows;
+  const sign = dir === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const av = refCell(a, key), bv = refCell(b, key);
+    const an = Number(av), bn = Number(bv);
+    if (Number.isFinite(an) && Number.isFinite(bn) && av !== "" && bv !== "") return (an - bn) * sign;
+    return String(av).localeCompare(String(bv)) * sign;
+  });
+}
+
+/**
+ * @param {Object} cfg
+ * @param {string}   cfg.id           unique per table; namespaces the DOM hooks
+ * @param {Object[]} cfg.rows
+ * @param {Array}    cfg.columns      {key, label, align?, format?, sortable?}
+ * @param {string[]} cfg.searchKeys
+ * @param {Array}    [cfg.filters]    {key, label, values[]}
+ * @param {Function} [cfg.detail]     row -> HTML, shown when the row is selected
+ * @param {Function} [cfg.rowId]      row -> string
+ * @param {string}   [cfg.placeholder]
+ * @param {string}   [cfg.emptyText]
+ * @param {Object}   ui               {search, sortKey, sortDir, filters, selectedId}
+ */
+function refTableHTML(cfg, ui) {
+  const rowId = cfg.rowId ?? (r => r.id);
+  const filters = cfg.filters ?? [];
+
+  let rows = refSearch(cfg.rows, ui.search, cfg.searchKeys);
+  rows = refFilter(rows, filters, ui.filters);
+  rows = refSort(rows, ui.sortKey, ui.sortDir);
+
+  const controls = `
+    <div class="ref-controls">
+      <span class="search-wrap">
+        <span class="glass">&#128269;</span>
+        <input type="text" class="ref-search" data-ref="${esc(cfg.id)}"
+               placeholder="${esc(cfg.placeholder ?? "Search…")}"
+               value="${esc(ui.search)}" autocomplete="off" spellcheck="false">
+      </span>
+      ${filters.map(f => `
+        <select class="ref-filter" data-ref="${esc(cfg.id)}" data-key="${esc(f.key)}">
+          <option value="">${esc(f.label)}</option>
+          ${f.values.map(v => `
+            <option value="${esc(v)}"${ui.filters?.[f.key] === v ? " selected" : ""}>${esc(v)}</option>`).join("")}
+        </select>`).join("")}
+      <span class="spacer"></span>
+      <span class="count" aria-live="polite">${rows.length} of ${cfg.rows.length}</span>
+    </div>`;
+
+  if (rows.length === 0) {
+    return `${controls}<div class="empty"><span class="glyph">&#128269;</span>
+      <div>${esc(cfg.emptyText ?? "No match.")}</div></div>`;
+  }
+
+  const head = cfg.columns.map(c => {
+    const active = ui.sortKey === c.key;
+    const arrow = active ? (ui.sortDir === "desc" ? " ▾" : " ▴") : "";
+    return c.sortable === false
+      ? `<th style="text-align:${c.align ?? "left"}">${esc(c.label)}</th>`
+      : `<th style="text-align:${c.align ?? "left"}">
+           <button class="ref-sort" data-ref="${esc(cfg.id)}" data-key="${esc(c.key)}"
+                   aria-sort="${active ? ui.sortDir : "none"}">${esc(c.label)}${arrow}</button>
+         </th>`;
+  }).join("");
+
+  const body = rows.map(r => {
+    const id = rowId(r);
+    const selected = ui.selectedId === id;
+    const cells = cfg.columns.map(c => {
+      const raw = c.format ? c.format(r) : esc(refCell(r, c.key));
+      return `<td style="text-align:${c.align ?? "left"}">${raw}</td>`;
+    }).join("");
+
+    const detail = selected && cfg.detail
+      ? `<tr class="ref-detail-row"><td colspan="${cfg.columns.length}">${cfg.detail(r)}</td></tr>`
+      : "";
+
+    return `<tr class="ref-row${selected ? " is-selected" : ""}"
+                data-ref="${esc(cfg.id)}" data-row="${esc(id)}"
+                tabindex="0" aria-expanded="${selected}">${cells}</tr>${detail}`;
+  }).join("");
+
+  return `${controls}
+    <div class="ref-scroll">
+      <table class="ref"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+    </div>`;
+}
+
+/* --------------------------------------------------------------------------
+   DURATIONS — docs/08-REFERENCE-DATA.md §3
+   -------------------------------------------------------------------------- */
+
+/** "3:00" -> 180. Non-timed values (e.g. "instant") -> null. */
+function parseDuration(s) {
+  const m = /^(\d+):([0-5]\d)$/.exec(String(s ?? "").trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+function formatDuration(total) {
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Splash applies 3/4 of the duration; lingering clouds apply 1/4. */
+function scaleDuration(s, factor) {
+  const t = parseDuration(s);
+  return t === null ? s : formatDuration(Math.floor(t * factor));
+}
+
+const SPLASH_FACTOR = 0.75;
+const LINGERING_FACTOR = 0.25;
+
+/**
+ * The full brewing chain for one potion: the spine, then every variant.
+ * docs/08-REFERENCE-DATA.md §3.1
+ *
+ * Redstone/Glowstone are applied BEFORE Gunpowder — same result either way, but
+ * fewer wasted ingredients, so that is the order presented.
+ */
+function potionChain(p, data) {
+  const steps = [];
+
+  if (p.base === "awkward") {
+    steps.push({ input: "Water Bottle",   add: "Nether Wart", out: "Awkward Potion" });
+    steps.push({ input: "Awkward Potion", add: p.ingredient,  out: p.name, duration: p.baseDuration });
+  } else {
+    steps.push({ input: "Water Bottle",   add: p.ingredient,  out: p.name, duration: p.baseDuration });
+  }
+
+  const variants = [];
+  if (p.extended) {
+    variants.push({ add: p.extended.with, out: `${p.name} (extended)`, duration: p.extended.duration, kind: "extended" });
+  }
+  if (p.amplified) {
+    variants.push({ add: p.amplified.with, out: `${p.effect} II`, duration: p.amplified.duration, kind: "amplified" });
+  }
+  if (p.splashable) {
+    variants.push({
+      add: "Gunpowder", out: `Splash ${p.name}`, kind: "splash",
+      duration: scaleDuration(p.baseDuration, SPLASH_FACTOR),
+      note: p.extended ? `${scaleDuration(p.extended.duration, SPLASH_FACTOR)} if extended first` : null,
+    });
+  }
+  if (p.lingering) {
+    variants.push({
+      add: "Dragon's Breath", out: `Lingering ${p.name}`, kind: "lingering",
+      duration: scaleDuration(p.baseDuration, LINGERING_FACTOR),
+      note: "splash potion only",
+    });
+  }
+
+  const corrupt = p.corruptsTo
+    ? data.entries.find(e => e.id === p.corruptsTo) ?? null
+    : null;
+
+  return { steps, variants, corrupt };
+}
+
+/**
+ * "I have X — what can I brew?" docs/08-REFERENCE-DATA.md §3.9
+ *
+ * `asSource` is why ingredientSource must always be populated: typing "gold"
+ * must surface Night Vision and Healing, because both need gold nuggets even
+ * though neither lists gold as its ingredient.
+ */
+function whatCanIBrew(query, data) {
+  const q = String(query ?? "").trim().toLowerCase();
+  if (!q) return { query: "", asIngredient: [], asModifier: [], asSource: [], asBase: [] };
+
+  const hit = (s) => String(s ?? "").toLowerCase().includes(q);
+
+  const asIngredient = data.entries.filter(e => hit(e.ingredient));
+  const asIngredientIds = new Set(asIngredient.map(e => e.id));
+
+  return {
+    query: q,
+    asIngredient,
+    asModifier: data.modifiers.filter(m => hit(m.name)),
+    asBase:     data.bases.filter(b => hit(b.ingredient) || hit(b.name)),
+    // Don't repeat a potion that already matched on its ingredient.
+    asSource:   data.entries.filter(e => !asIngredientIds.has(e.id) && hit(e.ingredientSource)),
+  };
+}
+
 /**
  * Sort comparators. docs/07-ALGORITHMS.md §7.2
  * ISO 8601 UTC strings sort lexicographically in chronological order, so
@@ -1339,6 +1646,196 @@ const SEED_LOCATIONS = [
 
 
 /* ==========================================================================
+   BREWING REFERENCE DATA
+   Read-only. Never merged into user data (ADR-012). Inlined for the same
+   file:// reason as the seed; data/brewing.json is the copy of record.
+
+   `verified: false` — the GRAPH (what makes what) is exact vanilla behaviour
+   and stable across releases, but DURATIONS shift between versions. Check them
+   against minecraft.wiki for your installed version, then flip the flag.
+   ========================================================================== */
+
+const BREWING = {
+  schemaVersion: 1,
+  dataset: "brewing",
+  gameVersion: "1.21",
+  verified: false,
+  source: "minecraft.wiki, hand-entered 2026-08-14. Durations NOT yet verified.",
+
+  bases: [
+    { id: "water",   name: "Water Bottle",   from: "Glass bottle filled at any water source or cauldron", notes: "The root of every brew." },
+    { id: "awkward", name: "Awkward Potion", base: "water", ingredient: "Nether Wart",
+      ingredientSource: "Nether fortress soul sand gardens; farmable on soul sand anywhere",
+      notes: "The base for nearly every useful potion. Always brew a stack first." },
+    { id: "mundane", name: "Mundane Potion", base: "water", ingredient: "Redstone Dust, Sugar, Spider Eye, Magma Cream, Blaze Powder, Glistering Melon Slice, or Ghast Tear",
+      ingredientSource: "Various", notes: "No effect. A dead end — you brewed an ingredient into water instead of into Awkward." },
+    { id: "thick",   name: "Thick Potion",   base: "water", ingredient: "Glowstone Dust",
+      ingredientSource: "Nether glowstone blobs", notes: "No effect. Dead end." },
+  ],
+
+  entries: [
+    { id: "fire_resistance", name: "Potion of Fire Resistance", effect: "Fire Resistance", base: "awkward",
+      ingredient: "Magma Cream", ingredientSource: "Blaze powder + slimeball, or magma cube drops in the nether",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" }, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["nether", "essential", "utility"],
+      notes: "Essential for the nether. Brew before any bastion or fortress run. No level II exists." },
+
+    { id: "swiftness", name: "Potion of Swiftness", effect: "Speed", base: "awkward",
+      ingredient: "Sugar", ingredientSource: "Sugar cane",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" },
+      amplified: { with: "Glowstone Dust", duration: "1:30" },
+      splashable: true, lingering: true, corruptsTo: "slowness", corruptsFrom: null,
+      tags: ["utility", "travel"], notes: "Cheapest useful potion — sugar cane is free and renewable." },
+
+    { id: "slowness", name: "Potion of Slowness", effect: "Slowness", base: "awkward",
+      ingredient: "Fermented Spider Eye (applied to Swiftness or Leaping)",
+      ingredientSource: "Spider eye + brown mushroom + sugar",
+      baseDuration: "1:30", extended: { with: "Redstone Dust", duration: "4:00" },
+      amplified: { with: "Glowstone Dust", duration: "0:20" },
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: "swiftness",
+      tags: ["negative", "combat"], notes: "Only useful as a splash potion thrown at mobs." },
+
+    { id: "strength", name: "Potion of Strength", effect: "Strength", base: "awkward",
+      ingredient: "Blaze Powder", ingredientSource: "Blaze rods from a nether fortress — you have one recorded",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" },
+      amplified: { with: "Glowstone Dust", duration: "1:30" },
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["combat"], notes: "Adds flat melee damage. Stacks with Sharpness." },
+
+    { id: "healing", name: "Potion of Healing", effect: "Instant Health", base: "awkward",
+      ingredient: "Glistering Melon Slice", ingredientSource: "Melon slice + 8 gold nuggets",
+      baseDuration: "instant", extended: null, amplified: { with: "Glowstone Dust", duration: "instant" },
+      splashable: true, lingering: true, corruptsTo: "harming", corruptsFrom: null,
+      tags: ["combat", "healing"], notes: "Instant — Redstone Dust does nothing. Splash heals allies; harms undead." },
+
+    { id: "harming", name: "Potion of Harming", effect: "Instant Damage", base: "awkward",
+      ingredient: "Fermented Spider Eye (applied to Healing or Poison)",
+      ingredientSource: "Spider eye + brown mushroom + sugar",
+      baseDuration: "instant", extended: null, amplified: { with: "Glowstone Dust", duration: "instant" },
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: "healing",
+      tags: ["combat", "negative"], notes: "Instant. Heals undead mobs instead of damaging them." },
+
+    { id: "leaping", name: "Potion of Leaping", effect: "Jump Boost", base: "awkward",
+      ingredient: "Rabbit's Foot", ingredientSource: "Rabbits",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" },
+      amplified: { with: "Glowstone Dust", duration: "1:30" },
+      splashable: true, lingering: true, corruptsTo: "slowness", corruptsFrom: null,
+      tags: ["utility", "travel"], notes: "Also reduces fall damage by the jump-boost level." },
+
+    { id: "poison", name: "Potion of Poison", effect: "Poison", base: "awkward",
+      ingredient: "Spider Eye", ingredientSource: "Spiders — you have a spider spawner recorded",
+      baseDuration: "0:45", extended: { with: "Redstone Dust", duration: "1:30" },
+      amplified: { with: "Glowstone Dust", duration: "0:21" },
+      splashable: true, lingering: true, corruptsTo: "harming", corruptsFrom: null,
+      tags: ["combat", "negative"], notes: "Never kills — drops the target to half a heart at most." },
+
+    { id: "regeneration", name: "Potion of Regeneration", effect: "Regeneration", base: "awkward",
+      ingredient: "Ghast Tear", ingredientSource: "Ghasts in the nether",
+      baseDuration: "0:45", extended: { with: "Redstone Dust", duration: "1:30" },
+      amplified: { with: "Glowstone Dust", duration: "0:22" },
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["healing"], notes: "Ghast tears are the bottleneck — kill ghasts over solid ground or the tear despawns in lava." },
+
+    { id: "water_breathing", name: "Potion of Water Breathing", effect: "Water Breathing", base: "awkward",
+      ingredient: "Pufferfish", ingredientSource: "Fishing, or ocean mobs",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" }, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["utility", "ocean"], notes: "Essential for the ocean monument near your 823 / -271 shipwreck. No level II." },
+
+    { id: "night_vision", name: "Potion of Night Vision", effect: "Night Vision", base: "awkward",
+      ingredient: "Golden Carrot", ingredientSource: "Carrot + 8 gold nuggets",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" }, amplified: null,
+      splashable: true, lingering: true, corruptsTo: "invisibility", corruptsFrom: null,
+      tags: ["utility", "caving"], notes: "Pairs with Water Breathing for monument runs. No level II." },
+
+    { id: "invisibility", name: "Potion of Invisibility", effect: "Invisibility", base: "awkward",
+      ingredient: "Fermented Spider Eye (applied to Night Vision)",
+      ingredientSource: "Spider eye + brown mushroom + sugar",
+      baseDuration: "3:00", extended: { with: "Redstone Dust", duration: "8:00" }, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: "night_vision",
+      tags: ["utility", "stealth"], notes: "Worn armour and held items stay visible. Remove armour for true invisibility." },
+
+    { id: "weakness", name: "Potion of Weakness", effect: "Weakness", base: "water",
+      ingredient: "Fermented Spider Eye", ingredientSource: "Spider eye + brown mushroom + sugar",
+      baseDuration: "1:30", extended: { with: "Redstone Dust", duration: "4:00" }, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["utility", "negative", "villager"],
+      notes: "The only useful potion brewed directly from water. Splash Weakness + golden apple cures zombie villagers." },
+
+    { id: "slow_falling", name: "Potion of Slow Falling", effect: "Slow Falling", base: "awkward",
+      ingredient: "Phantom Membrane", ingredientSource: "Phantoms — spawn after 3 in-game days without sleeping",
+      baseDuration: "1:30", extended: { with: "Redstone Dust", duration: "4:00" }, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["utility", "travel"], notes: "Negates all fall damage. Carry one on any nether ceiling trip." },
+
+    { id: "turtle_master", name: "Potion of the Turtle Master", effect: "Slowness IV + Resistance III", base: "awkward",
+      ingredient: "Turtle Shell", ingredientSource: "5 scutes from baby turtles growing up",
+      baseDuration: "0:20", extended: { with: "Redstone Dust", duration: "0:40" },
+      amplified: { with: "Glowstone Dust", duration: "0:20" },
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["combat", "defence"], notes: "Massive damage reduction at the cost of near-immobility. Emergency button, not a buff." },
+
+    { id: "wind_charged", name: "Potion of Wind Charging", effect: "Wind Charged", base: "awkward",
+      ingredient: "Breeze Rod", ingredientSource: "Breeze in a trial chamber — YOU HAVE ONE at 2217 / -5 / -4024",
+      baseDuration: "3:00", extended: null, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["combat", "1.21"], notes: "1.21 addition. Emits a wind burst when the affected entity is damaged. VERIFY duration and variants for your version." },
+
+    { id: "weaving", name: "Potion of Weaving", effect: "Weaving", base: "awkward",
+      ingredient: "Cobweb", ingredientSource: "Spider spawner area — YOU HAVE ONE at 91 / -13 / 200",
+      baseDuration: "3:00", extended: null, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["combat", "1.21"], notes: "1.21 addition. Spreads cobwebs when the affected entity dies. VERIFY variants." },
+
+    { id: "oozing", name: "Potion of Oozing", effect: "Oozing", base: "awkward",
+      ingredient: "Slime Block", ingredientSource: "9 slimeballs — slime chunks or swamp slimes",
+      baseDuration: "3:00", extended: null, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["combat", "1.21"], notes: "1.21 addition. Spawns two slimes on the affected entity's death. VERIFY variants." },
+
+    { id: "infested", name: "Potion of Infestation", effect: "Infested", base: "awkward",
+      ingredient: "Stone", ingredientSource: "Any stone block",
+      baseDuration: "3:00", extended: null, amplified: null,
+      splashable: true, lingering: true, corruptsTo: null, corruptsFrom: null,
+      tags: ["combat", "1.21"], notes: "1.21 addition. Chance to spawn silverfish when the affected entity takes damage. VERIFY variants." },
+  ],
+
+  modifiers: [
+    { id: "redstone", name: "Redstone Dust", effect: "Extends duration",
+      appliesTo: "Any non-instant potion",
+      doesNotWorkOn: "Healing, Harming (instant), and the 1.21 effect potions",
+      notes: "Apply BEFORE Gunpowder. Same result either way, fewer wasted ingredients." },
+    { id: "glowstone", name: "Glowstone Dust", effect: "Increases to level II, usually shortening duration",
+      appliesTo: "Potions that have a level II",
+      doesNotWorkOn: "Fire Resistance, Night Vision, Invisibility, Water Breathing, Slow Falling, Weakness, and the 1.21 effect potions",
+      notes: "Mutually exclusive with Redstone Dust — a potion is extended OR amplified, never both." },
+    { id: "gunpowder", name: "Gunpowder", effect: "Converts to a Splash potion (throwable)",
+      appliesTo: "Any potion", doesNotWorkOn: "—",
+      notes: "Splash applies about 3/4 of the base duration to others. Apply last." },
+    { id: "dragons_breath", name: "Dragon's Breath", effect: "Converts a Splash potion to Lingering",
+      appliesTo: "Splash potions only", doesNotWorkOn: "Regular potions — must be splashed first",
+      notes: "Lingering clouds apply about 1/4 of the base duration. Collected from the dragon's breath attack with an empty bottle." },
+    { id: "fermented_spider_eye", name: "Fermented Spider Eye", effect: "Corrupts a potion into its counterpart",
+      appliesTo: "See the corruption table", doesNotWorkOn: "Potions with no counterpart",
+      notes: "Crafted from spider eye + brown mushroom + sugar." },
+  ],
+
+  corruptions: [
+    { from: "night_vision", fromName: "Night Vision", to: "invisibility", toName: "Invisibility" },
+    { from: "swiftness",    fromName: "Swiftness",    to: "slowness",     toName: "Slowness" },
+    { from: "leaping",      fromName: "Leaping",      to: "slowness",     toName: "Slowness" },
+    { from: "healing",      fromName: "Healing",      to: "harming",      toName: "Harming" },
+    { from: "poison",       fromName: "Poison",       to: "harming",      toName: "Harming" },
+    { from: "water",        fromName: "Water Bottle", to: "weakness",     toName: "Weakness" },
+    { from: "awkward",      fromName: "Awkward",      to: "weakness",     toName: "Weakness" },
+    { from: "thick",        fromName: "Thick",        to: "weakness",     toName: "Weakness" },
+    { from: "mundane",      fromName: "Mundane",      to: "weakness",     toName: "Weakness" },
+  ],
+};
+
+
+/* ==========================================================================
    PRESENTATION CONSTANTS — docs/04-UIUX-SPEC.md §4.2, §4.3
    Emoji, not an icon pack: zero bytes, zero build step, already themed. ADR-011
    ========================================================================== */
@@ -1392,6 +1889,12 @@ let state = {
     conv:           { src: "overworld", x: "", z: "" },   // Portals tab converter
     import:         { rows: [], unrecognised: [] },
     pendingImport:  null,
+    brewHave:       "",
+    // One slice per reference table. Phase 12 adds enchanting/mobs/fuel here
+    // without touching refTableHTML.
+    ref: {
+      brewing: { search: "", sortKey: "name", sortDir: "asc", filters: {}, selectedId: null },
+    },
     recentlyViewed: [],
   },
 };
@@ -1922,11 +2425,7 @@ function renderPanel() {
   }
 
   if (state.ui.activeTab === "brewing") {
-    panel.innerHTML = stubHTML("\u{1F9EA}", "Coming in v0.3", "Phase 6 builds this tab.", [
-      "Full offline brewing tree",
-      "“I have X, what can I brew?” reverse lookup",
-      "Modifier and corruption tables",
-    ]);
+    panel.innerHTML = brewingPanelHTML();
     return;
   }
 
@@ -2136,6 +2635,141 @@ function portalsPanelHTML() {
             ${portalRowHTML(p, all)}
           </article>`).join("")}</div>`}
   `;
+}
+
+/* ---- brewing tab — docs/08-REFERENCE-DATA.md §5 ---- */
+
+function chainHTML(p) {
+  const { steps, variants, corrupt } = potionChain(p, BREWING);
+
+  const spine = steps.map((s, i) => `
+    <div class="chain-step">
+      <div class="chain-from">${i === 0 ? esc(s.input) : ""}</div>
+      <div class="chain-add">+ ${esc(s.add)}</div>
+      <div class="chain-out">
+        ${esc(s.out)}
+        ${s.duration ? `<span class="chain-dur">${esc(s.duration)}</span>` : ""}
+      </div>
+    </div>`).join("");
+
+  const vars = variants.map(v => `
+    <div class="chain-variant ${esc(v.kind)}">
+      <span class="chain-add">+ ${esc(v.add)}</span>
+      <span class="chain-out">${esc(v.out)}</span>
+      <span class="chain-dur">${esc(v.duration)}</span>
+      ${v.note ? `<span class="muted">(${esc(v.note)})</span>` : ""}
+    </div>`).join("");
+
+  const gaps = [
+    !p.extended  ? "Redstone Dust does nothing — this potion cannot be extended."  : null,
+    !p.amplified ? "Glowstone Dust does nothing — this potion has no level II."    : null,
+  ].filter(Boolean);
+
+  return `
+    <div class="chain">
+      <div class="chain-spine">${spine}</div>
+      ${vars ? `<div class="chain-variants">${vars}</div>` : ""}
+      ${corrupt ? `<div class="chain-variant corrupt">
+          <span class="chain-add">+ Fermented Spider Eye</span>
+          <span class="chain-out">${esc(corrupt.name)}</span>
+          <span class="muted">(corrupts)</span>
+        </div>` : ""}
+      ${gaps.length ? `<ul class="msg-list muted">${gaps.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : ""}
+      <dl class="chain-meta">
+        <dt>Source</dt><dd>${esc(p.ingredientSource)}</dd>
+        ${p.notes ? `<dt>Note</dt><dd>${esc(p.notes)}</dd>` : ""}
+      </dl>
+    </div>`;
+}
+
+function reverseLookupHTML() {
+  const q = state.ui.brewHave;
+  const r = whatCanIBrew(q, BREWING);
+  const total = r.asIngredient.length + r.asModifier.length + r.asSource.length + r.asBase.length;
+
+  const group = (title, items, render) => items.length
+    ? `<div class="rl-group"><div class="rl-title">${esc(title)}</div>${items.map(render).join("")}</div>`
+    : "";
+
+  return `
+    <section class="have">
+      <div class="section-label">I have&hellip;</div>
+      <input type="text" id="brew-have" value="${esc(q)}" autocomplete="off" spellcheck="false"
+             placeholder="magma cream, gold, blaze&hellip;" aria-label="What ingredient do you have?">
+      ${!q.trim() ? `<p class="hint">Type an ingredient to see what it brews.</p>`
+        : total === 0 ? `<p class="hint">Nothing uses &ldquo;${esc(q.trim())}&rdquo;. Try a potion name in the table above instead.</p>`
+        : `
+        ${group("Brews directly into", r.asIngredient, e => `
+          <button class="rl-hit" data-act="select-potion" data-id="${esc(e.id)}">
+            ${esc(e.name)} <span class="muted">from ${esc(e.base)}</span></button>`)}
+        ${group("Needed to make", r.asSource, e => `
+          <button class="rl-hit" data-act="select-potion" data-id="${esc(e.id)}">
+            ${esc(e.name)} <span class="muted">— ${esc(e.ingredientSource)}</span></button>`)}
+        ${group("Modifier", r.asModifier, m => `
+          <div class="rl-hit static"><strong>${esc(m.name)}</strong> — ${esc(m.effect)}</div>`)}
+        ${group("Base", r.asBase, b => `
+          <div class="rl-hit static"><strong>${esc(b.name)}</strong>${b.ingredient ? ` — water + ${esc(b.ingredient)}` : ""}</div>`)}
+      `}
+    </section>`;
+}
+
+/** Persistent footer: small, constantly needed, never hidden behind a click. */
+function brewingFooterHTML() {
+  return `
+    <section class="brew-footer">
+      <div>
+        <div class="section-label">Modifiers</div>
+        <ul class="kv">
+          ${BREWING.modifiers.map(m => `
+            <li><strong>${esc(m.name)}</strong> — ${esc(m.effect)}</li>`).join("")}
+        </ul>
+      </div>
+      <div>
+        <div class="section-label">Fermented Spider Eye corrupts</div>
+        <ul class="kv">
+          ${BREWING.corruptions.map(c => `
+            <li>${esc(c.fromName)} &rarr; <strong>${esc(c.toName)}</strong></li>`).join("")}
+        </ul>
+      </div>
+    </section>`;
+}
+
+function brewingPanelHTML() {
+  const ui = state.ui.ref.brewing;
+
+  const cfg = {
+    id: "brewing",
+    rows: BREWING.entries,
+    placeholder: "Search potions, effects, ingredients…",
+    emptyText: "No potion matches. Try an ingredient name in “I have…” below.",
+    searchKeys: ["name", "effect", "ingredient", "ingredientSource", "notes", "tags"],
+    filters: [{
+      key: "tags", label: "All tags",
+      values: [...new Set(BREWING.entries.flatMap(e => e.tags))].sort(),
+    }],
+    columns: [
+      { key: "name",         label: "Potion", format: r => `<strong>${esc(r.name)}</strong>` },
+      { key: "ingredient",   label: "Ingredient" },
+      { key: "baseDuration", label: "Base", align: "right" },
+      { key: "_variants",    label: "Variants", sortable: false, format: r => [
+          r.extended  ? `<span class="pill">ext ${esc(r.extended.duration)}</span>` : "",
+          r.amplified ? `<span class="pill">II</span>` : "",
+          r.splashable ? `<span class="pill">splash</span>` : "",
+        ].join(" ") },
+    ],
+    detail: chainHTML,
+  };
+
+  const unverified = BREWING.verified ? "" : `
+    <div class="verdict warn" style="margin-bottom:var(--s-3)">
+      &#9888; Durations in this table are <strong>unverified</strong> for game version
+      ${esc(BREWING.gameVersion)}. The brewing graph (what makes what) is exact; the
+      numbers shift between releases. Check them against minecraft.wiki for your
+      installed version, then set <code>verified: true</code> in
+      <code>data/brewing.json</code> and in the inline copy.
+    </div>`;
+
+  return `${unverified}${refTableHTML(cfg, ui)}${reverseLookupHTML()}${brewingFooterHTML()}`;
 }
 
 /* ---- settings & import modals — docs/03-APP-FLOW.md §§7,8,10 ---- */
@@ -2638,6 +3272,13 @@ document.addEventListener("click", (e) => {
     case "clear-search":   state.ui.search = ""; render(); $("search")?.focus(); return;
     case "clear-filters":  state.ui.filters = { dimension: null, type: null }; render(); return;
     case "settings":       state.ui.modal = "settings"; render(); return;
+    case "select-potion":
+      // Jump from a reverse-lookup hit to the expanded row in the table.
+      refSlice("brewing").selectedId = id;
+      refSlice("brewing").search = "";
+      refSlice("brewing").filters = {};
+      render();
+      return;
     case "tp": {
       const loc = activeLocations().find(l => l.id === id);
       if (loc) copyText(tpCommand(loc)).then(ok =>
@@ -2685,6 +3326,12 @@ document.addEventListener("click", (e) => {
       return;
   }
 
+  const sortBtn = e.target.closest(".ref-sort");
+  if (sortBtn) { onRefSort(sortBtn.dataset.ref, sortBtn.dataset.key); return; }
+
+  const refRow = e.target.closest(".ref-row");
+  if (refRow) { onRefSelect(refRow.dataset.ref, refRow.dataset.row); return; }
+
   const chip = e.target.closest("[data-filter]");
   if (chip) {
     state.ui.filters.dimension = chip.dataset.value || null;
@@ -2717,10 +3364,37 @@ function onConverterInput(el) {
 document.addEventListener("input", (e) => {
   if (e.target.id === "search") { state.ui.search = e.target.value; render(); return; }
   if (e.target.classList?.contains("conv-in")) { onConverterInput(e.target); return; }
+  if (e.target.classList?.contains("ref-search")) {
+    refSlice(e.target.dataset.ref).search = e.target.value;
+    render();
+    return;
+  }
+  if (e.target.id === "brew-have") { state.ui.brewHave = e.target.value; render(); return; }
   if (e.target.dataset?.imp === "name") { onReviewInput(e.target); return; }
   if (e.target.id === "import-text") return;   // free typing; parsed on demand
   if (state.ui.modal === "edit" && e.target.closest("#loc-form")) { readDraft(); render(); }
 });
+
+/**
+ * Reftable interactions. Entirely generic — the handler knows only the table id
+ * from `data-ref`, never what the table contains.
+ */
+function refSlice(id) {
+  return (state.ui.ref[id] ??= { search: "", sortKey: null, sortDir: "asc", filters: {}, selectedId: null });
+}
+
+function onRefSort(id, key) {
+  const s = refSlice(id);
+  if (s.sortKey === key) s.sortDir = s.sortDir === "asc" ? "desc" : "asc";
+  else { s.sortKey = key; s.sortDir = "asc"; }
+  render();
+}
+
+function onRefSelect(id, rowId) {
+  const s = refSlice(id);
+  s.selectedId = s.selectedId === rowId ? null : rowId;   // click again to collapse
+  render();
+}
 
 /** Review-table edits write straight back into the candidate rows. */
 function onReviewInput(el) {
@@ -2744,6 +3418,12 @@ document.addEventListener("change", (e) => {
   if (e.target.id === "sort")        { state.ui.sort = e.target.value; render(); return; }
   if (e.target.id === "type-filter") { state.ui.filters.type = e.target.value || null; render(); return; }
   if (e.target.classList?.contains("conv-in")) { onConverterInput(e.target); return; }
+  if (e.target.classList?.contains("ref-filter")) {
+    const s = refSlice(e.target.dataset.ref);
+    s.filters = { ...s.filters, [e.target.dataset.key]: e.target.value || null };
+    render();
+    return;
+  }
   if (e.target.dataset?.imp)         { onReviewInput(e.target); return; }
   if (e.target.id === "s-theme")     { state.data.settings.theme = e.target.value; save(); render(); return; }
   if (e.target.id === "s-coord")     { state.data.settings.coordFormat = e.target.value; save(); render(); return; }

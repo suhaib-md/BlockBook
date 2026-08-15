@@ -13,10 +13,10 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 
 | | |
 |---|---|
-| Current version | `v0.2` — Phases 0–4 done. Coordinates + portal validator working. |
-| Next milestone | `v0.3` — Phases 5–6: import/export, brewing tab |
-| First shippable | `v0.3` — browser app, fully usable, then **use it for a week** |
-| Tests | `node tests/run-all.mjs` — 219 checks, no dependencies |
+| Current version | **`v0.3`** — Phases 0–6 done. Coordinates, portal validator, brewing. |
+| Next step | 🛑 **Use it for a week before Phase 7** (ADR-014) |
+| Tests | `node tests/run-all.mjs` — 400 checks, no dependencies |
+| Outstanding | Brewing **durations are unverified** — check against minecraft.wiki for your game version, then set `verified: true` |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 
 ---

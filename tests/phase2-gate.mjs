@@ -136,18 +136,21 @@ check(els.statusbar.innerHTML.includes("15 locations"), "status bar counts locat
 check(els.statusbar.innerHTML.includes("6 portals"), "status bar counts portals");
 check(els.toolbar.innerHTML.includes('id="sort"'), "sort control present on Coordinates tab");
 
-// Portals became real in Phase 4; brewing/reference are still stubs.
+// Portals became real in Phase 4, brewing in Phase 6. Reference waits for v1.2.
 X.state.ui.activeTab = "portals";
 X.render();
 check(els.panel.innerHTML.includes("Y is not converted"), "portals tab is built (Phase 4)");
 check(els.toolbar.innerHTML === "", "portals tab hides the coordinates toolbar");
 
-for (const tab of ["brewing", "reference"]) {
-  X.state.ui.activeTab = tab;
-  X.render();
-  check(els.panel.innerHTML.includes("Coming in"), `${tab} tab shows an honest stub`);
-  check(els.toolbar.innerHTML === "", `${tab} tab hides the coordinates toolbar`);
-}
+X.state.ui.activeTab = "brewing";
+X.render();
+check(els.panel.innerHTML.includes("Fire Resistance"), "brewing tab is built (Phase 6)");
+check(els.toolbar.innerHTML === "", "brewing tab hides the coordinates toolbar");
+
+X.state.ui.activeTab = "reference";
+X.render();
+check(els.panel.innerHTML.includes("Coming in"), "reference tab shows an honest stub");
+check(els.toolbar.innerHTML === "", "reference tab hides the coordinates toolbar");
 X.state.ui.activeTab = "coordinates";
 
 // ============ perf ============

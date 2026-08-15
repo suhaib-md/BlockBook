@@ -24,6 +24,7 @@ const GATES = [
   ["3", "CRUD + search + filter + persistence"],
   ["4", "Portal maths — golden cases G1-G9"],
   ["5", "Import / export + Notepad importer"],
+  ["6", "Brewing tab + generic reftable"],
 ];
 
 let total = 0, failed = 0;
