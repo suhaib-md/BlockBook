@@ -1,0 +1,21 @@
+{
+  "name": "blockbook",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "description": "Local-first Minecraft companion: coordinate book, nether portal validator, offline brewing tables.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "test": "node tests/run-all.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "vite": "^6"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2"
+  }
+}

@@ -1,0 +1,31 @@
+[package]
+name = "blockbook"
+version = "0.3.0"
+description = "Local-first Minecraft companion"
+authors = ["Muhammed Suhaib"]
+edition = "2021"
+rust-version = "1.77"
+
+# The library target is what Tauri 2 builds the app around; main.rs just calls it.
+[lib]
+name = "blockbook_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+# Used by `tauri build`; serves assets from the embedded bundle rather than a dev server.
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+# Keep the binary near the <20 MB budget in docs/02-TRD.md §7.
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

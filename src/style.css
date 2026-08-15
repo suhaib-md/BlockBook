@@ -1,0 +1,645 @@
+  /* ==========================================================================
+     DESIGN TOKENS — docs/04-UIUX-SPEC.md §2
+     Declared once. Never hard-code a colour anywhere below this block.
+     ========================================================================== */
+  :root {
+    /* Surfaces (dark, default) */
+    --bg-0: #0e1116;  --bg-1: #161b22;  --bg-2: #21262d;  --bg-3: #30363d;
+    /* Text */
+    --fg-0: #e6edf3;  --fg-1: #9198a1;  --fg-2: #6e7681;
+    /* Dimension identity */
+    --ow: #3fb950;      --ow-bg: #12261a;
+    --nether: #f85149;  --nether-bg: #2d1416;
+    --end: #bc8cff;     --end-bg: #21182f;
+    /* Status */
+    --ok: #3fb950;  --warn: #d29922;  --bad: #f85149;  --info: #58a6ff;
+    /* Type */
+    --font-ui: "Segoe UI", system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    --fs-xs: 11px; --fs-sm: 12px; --fs-md: 14px; --fs-lg: 16px; --fs-xl: 20px;
+    /* Space (4px scale) */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px;
+    /* Shape */
+    --r-sm: 4px; --r-md: 6px; --r-lg: 10px;
+    --border: 1px solid var(--bg-3);
+    --shadow: 0 8px 24px rgba(0,0,0,.4);
+    /* Motion — docs/04-UIUX-SPEC.md §5. Durations are tokens so the
+       reduced-motion override can zero them without needing !important. */
+    --motion-hover: 80ms;
+    --motion-modal: 120ms;
+    --motion-panel: 140ms;
+    --motion-toast: 150ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --motion-hover: 0ms;
+      --motion-modal: 0ms;
+      --motion-panel: 0ms;
+      --motion-toast: 0ms;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg-0: #ffffff;  --bg-1: #f6f8fa;  --bg-2: #eaeef2;  --bg-3: #d0d7de;
+    --fg-0: #1f2328;  --fg-1: #59636e;  --fg-2: #818b98;
+    --ow: #1a7f37;      --ow-bg: #dafbe1;
+    --nether: #cf222e;  --nether-bg: #ffebe9;
+    --end: #8250df;     --end-bg: #fbefff;
+    --ok: #1a7f37;  --warn: #9a6700;  --bad: #cf222e;  --info: #0969da;
+    --shadow: 0 8px 24px rgba(0,0,0,.12);
+  }
+
+  /* ==========================================================================
+     LAYOUT — docs/04-UIUX-SPEC.md §3
+     ========================================================================== */
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg-0);
+    color: var(--fg-0);
+    font-family: var(--font-ui);
+    font-size: var(--fs-md);
+    line-height: 1.45;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---- top bar ---- */
+  .topbar {
+    height: 48px;
+    flex: 0 0 48px;
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    padding: 0 var(--s-4);
+    background: var(--bg-1);
+    border-bottom: var(--border);
+  }
+  .brand {
+    font-weight: 600;
+    font-size: var(--fs-md);
+    white-space: nowrap;
+  }
+  .tabs { display: flex; gap: var(--s-1); flex: 1; }
+  .tab {
+    background: none;
+    border: none;
+    color: var(--fg-1);
+    font: inherit;
+    padding: var(--s-1) var(--s-3);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+  }
+  .tab:hover { background: var(--bg-2); color: var(--fg-0); }
+  .tab[aria-selected="true"] {
+    background: var(--bg-2);
+    color: var(--fg-0);
+    box-shadow: inset 0 -2px 0 var(--info);
+  }
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--fg-1);
+    font-size: var(--fs-lg);
+    cursor: pointer;
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-sm);
+  }
+  .icon-btn:hover { background: var(--bg-2); color: var(--fg-0); }
+
+  /* ---- toolbar ---- */
+  .toolbar {
+    flex: 0 0 auto;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-2) var(--s-4);
+    border-bottom: var(--border);
+    background: var(--bg-0);
+  }
+  .toolbar label { color: var(--fg-1); font-size: var(--fs-sm); }
+  .toolbar-rows { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; }
+  .toolbar-row { display: flex; align-items: center; gap: var(--s-2); }
+
+  input[type="text"], input[type="number"], textarea {
+    background: var(--bg-2);
+    color: var(--fg-0);
+    border: var(--border);
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: var(--fs-md);
+    padding: var(--s-1) var(--s-2);
+    width: 100%;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+  }
+  .search-wrap { flex: 1; position: relative; display: flex; align-items: center; }
+  .search-wrap .glass {
+    position: absolute; left: var(--s-2); color: var(--fg-2);
+    font-size: var(--fs-sm); pointer-events: none;
+  }
+  #search { padding-left: 28px; }
+  .btn {
+    background: var(--bg-2);
+    color: var(--fg-0);
+    border: var(--border);
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: var(--fs-sm);
+    padding: var(--s-1) var(--s-3);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg-3); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn.primary { background: var(--info); border-color: var(--info); color: #06121f; font-weight: 600; }
+  .btn.danger  { color: var(--bad); border-color: var(--bad); }
+  .btn.ghost   { background: none; }
+
+  /* filter chips — docs/04-UIUX-SPEC.md §4.6 */
+  .chips { display: flex; gap: var(--s-1); }
+  .fchip {
+    background: none;
+    border: var(--border);
+    border-radius: var(--r-sm);
+    color: var(--fg-1);
+    font: inherit;
+    font-size: var(--fs-sm);
+    padding: 2px var(--s-2);
+    cursor: pointer;
+  }
+  .fchip:hover { color: var(--fg-0); }
+  .fchip[aria-pressed="true"] { color: var(--fg-0); }
+  .fchip[aria-pressed="true"][data-dim="overworld"] { background: var(--ow-bg);     border-color: var(--ow); }
+  .fchip[aria-pressed="true"][data-dim="nether"]    { background: var(--nether-bg); border-color: var(--nether); }
+  .fchip[aria-pressed="true"][data-dim="end"]       { background: var(--end-bg);    border-color: var(--end); }
+  .fchip[aria-pressed="true"][data-dim=""]          { background: var(--bg-2);      border-color: var(--fg-2); }
+
+  select {
+    background: var(--bg-2);
+    color: var(--fg-0);
+    border: var(--border);
+    border-radius: var(--r-sm);
+    font: inherit;
+    font-size: var(--fs-sm);
+    padding: var(--s-1) var(--s-2);
+  }
+  .spacer { flex: 1; }
+  .count { color: var(--fg-1); font-size: var(--fs-sm); }
+
+  /* ---- main panel ---- */
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-3) var(--s-4);
+  }
+
+  .section-label {
+    font-size: var(--fs-xs);
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin: var(--s-2) 0 var(--s-2);
+  }
+
+  /* ---- location card — docs/04-UIUX-SPEC.md §4.1 ---- */
+  .list { display: flex; flex-direction: column; gap: var(--s-1); }
+
+  .card {
+    background: var(--bg-1);
+    border: var(--border);
+    border-left: 3px solid transparent;
+    border-radius: var(--r-md);
+    padding: var(--s-2) var(--s-3);
+    transition: background var(--motion-hover) linear;
+  }
+  .card:hover { background: var(--bg-2); }
+  .card.is-favorite { border-left-color: var(--warn); }
+  .card:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+    background: var(--bg-2);
+  }
+
+  /* ---- recently viewed ---- */
+  .recents { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-bottom: var(--s-3); }
+  .recent {
+    display: flex; align-items: center; gap: var(--s-1);
+    background: var(--bg-1); border: var(--border); border-radius: var(--r-sm);
+    color: var(--fg-1); font: inherit; font-size: var(--fs-sm);
+    padding: 2px var(--s-2); cursor: pointer; max-width: 200px;
+  }
+  .recent:hover { background: var(--bg-2); color: var(--fg-0); }
+  .recent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  kbd {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    background: var(--bg-2);
+    border: var(--border);
+    border-bottom-width: 2px;
+    border-radius: var(--r-sm);
+    padding: 0 4px;
+    color: var(--fg-1);
+  }
+
+  .card-main {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+  .card-icon { font-size: var(--fs-lg); line-height: 1; flex: 0 0 auto; }
+  .card-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .coord {
+    font-family: var(--font-mono);
+    font-size: var(--fs-md);
+    color: var(--fg-0);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .coord .nil { color: var(--fg-2); }
+
+  /* ---- dimension badge — docs/04-UIUX-SPEC.md §4.2 ---- */
+  .badge {
+    font-size: var(--fs-xs);
+    letter-spacing: .5px;
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    text-transform: uppercase;
+    flex: 0 0 auto;
+    min-width: 30px;
+    text-align: center;
+  }
+  .badge.overworld { color: var(--ow);     background: var(--ow-bg); }
+  .badge.nether    { color: var(--nether); background: var(--nether-bg); }
+  .badge.end       { color: var(--end);    background: var(--end-bg); }
+
+  /* ---- tag chips ---- */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1);
+    margin: var(--s-1) 0 0 calc(var(--fs-lg) + var(--s-3));
+  }
+  .chip {
+    font-size: var(--fs-xs);
+    color: var(--fg-1);
+    background: var(--bg-2);
+    border-radius: var(--r-sm);
+    padding: 1px 6px;
+  }
+
+  .card-actions { display: flex; gap: var(--s-1); flex: 0 0 auto; }
+  .card-actions .btn { padding: 1px var(--s-2); font-size: var(--fs-xs); }
+
+  .note-preview {
+    margin: var(--s-1) 0 0 calc(var(--fs-lg) + var(--s-3));
+    font-size: var(--fs-sm);
+    color: var(--fg-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---- portal widgets — docs/04-UIUX-SPEC.md §4.4, §4.8 ---- */
+  .portal-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    margin: var(--s-1) 0 0 calc(var(--fs-lg) + var(--s-3));
+    font-size: var(--fs-sm);
+  }
+  .muted { color: var(--fg-2); }
+  .health { font-size: var(--fs-sm); white-space: nowrap; }
+  .health.ok    { color: var(--ok); }
+  .health.warn  { color: var(--warn); }
+  .health.bad   { color: var(--bad); }
+  .health.muted { color: var(--fg-2); }
+
+  .converter {
+    display: flex;
+    align-items: stretch;
+    gap: var(--s-3);
+    margin-bottom: var(--s-2);
+  }
+  .conv-side {
+    flex: 1;
+    background: var(--bg-1);
+    border: var(--border);
+    border-radius: var(--r-md);
+    padding: var(--s-3);
+  }
+  .conv-side.ow { border-color: color-mix(in srgb, var(--ow) 35%, var(--bg-3)); }
+  .conv-side.ne { border-color: color-mix(in srgb, var(--nether) 35%, var(--bg-3)); }
+  .conv-title {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-size: var(--fs-sm); color: var(--fg-1);
+    margin-bottom: var(--s-2);
+  }
+  .conv-side label {
+    display: flex; align-items: center; gap: var(--s-2);
+    color: var(--fg-1); font-size: var(--fs-sm);
+    margin-bottom: var(--s-2);
+  }
+  .conv-side input {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xl);
+    font-variant-numeric: tabular-nums;
+    padding: var(--s-1) var(--s-2);
+  }
+  .conv-arrow {
+    display: flex; align-items: center;
+    color: var(--fg-2); font-size: var(--fs-xl);
+  }
+  .conv-note {
+    color: var(--fg-2);
+    font-size: var(--fs-sm);
+    margin: 0 0 var(--s-4);
+  }
+
+  .verdict {
+    border-radius: var(--r-md);
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--fs-sm);
+    border-left: 3px solid transparent;
+  }
+  .verdict.ok   { background: var(--ow-bg);     border-left-color: var(--ok);   color: var(--fg-0); }
+  .verdict.warn { background: color-mix(in srgb, var(--warn) 12%, transparent);
+                  border-left-color: var(--warn); color: var(--fg-0); }
+  .verdict-actions { display: flex; gap: var(--s-2); margin-top: var(--s-2); }
+
+  .portal-panel {
+    border-top: var(--border);
+    padding-top: var(--s-3);
+    margin-top: var(--s-3);
+  }
+  .cp-line {
+    font-size: var(--fs-sm);
+    color: var(--fg-1);
+    margin-bottom: var(--s-2);
+  }
+
+  /* ---- empty states — docs/04-UIUX-SPEC.md §6 ---- */
+  .empty {
+    text-align: center;
+    color: var(--fg-1);
+    padding: var(--s-6) var(--s-4);
+  }
+  .empty .glyph { font-size: 28px; display: block; margin-bottom: var(--s-2); }
+  .empty .btn { margin-top: var(--s-3); }
+
+  /* ---- banner — docs/04-UIUX-SPEC.md §4.12 ---- */
+  .banner {
+    padding: var(--s-2) var(--s-4);
+    background: var(--nether-bg);
+    border-left: 3px solid var(--bad);
+    border-bottom: var(--border);
+    color: var(--fg-0);
+    font-size: var(--fs-sm);
+  }
+  .banner code { font-family: var(--font-mono); color: var(--fg-1); }
+
+  /* ---- modal — docs/04-UIUX-SPEC.md §4.7 ---- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--s-4);
+    z-index: 50;
+  }
+  .modal {
+    background: var(--bg-1);
+    border: var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 520px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    animation: pop var(--motion-modal) ease-out;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+  .modal-head {
+    display: flex; align-items: center;
+    padding: var(--s-3) var(--s-4);
+    border-bottom: var(--border);
+  }
+  .modal-head h2 { margin: 0; font-size: var(--fs-md); flex: 1; }
+  .modal-body { padding: var(--s-4); overflow-y: auto; }
+  .modal-foot {
+    display: flex; gap: var(--s-2); justify-content: flex-end;
+    padding: var(--s-3) var(--s-4);
+    border-top: var(--border);
+  }
+  .field { margin-bottom: var(--s-3); }
+  .field > label {
+    display: block;
+    font-size: var(--fs-sm);
+    color: var(--fg-1);
+    margin-bottom: var(--s-1);
+  }
+  .req { color: var(--warn); }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s-2); }
+  .radios { display: flex; gap: var(--s-2); }
+  .radios label {
+    flex: 1;
+    display: flex; align-items: center; gap: var(--s-1);
+    justify-content: center;
+    border: var(--border);
+    border-radius: var(--r-sm);
+    padding: var(--s-1) var(--s-2);
+    cursor: pointer;
+    font-size: var(--fs-sm);
+    color: var(--fg-1);
+  }
+  .radios label:has(input:checked) { color: var(--fg-0); border-color: var(--info); background: var(--bg-2); }
+  .hint { font-size: var(--fs-xs); color: var(--fg-2); margin-top: var(--s-1); }
+  .hint.warn { color: var(--warn); }
+  .msg-list { list-style: none; margin: 0 0 var(--s-3); padding: 0; font-size: var(--fs-sm); }
+  .msg-list li { padding: var(--s-1) 0; }
+  .msg-list li.err  { color: var(--bad); }
+  .msg-list li.warn { color: var(--warn); }
+  .checkline { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); color: var(--fg-1); }
+
+  /* ---- reftable — docs/08-REFERENCE-DATA.md §4 ---- */
+  .ref-controls {
+    display: flex; align-items: center; gap: var(--s-2);
+    margin-bottom: var(--s-3);
+  }
+  .ref-scroll { overflow-x: auto; }
+  table.ref { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+  table.ref th {
+    text-align: left; padding: 0; border-bottom: var(--border);
+  }
+  table.ref th .ref-sort,
+  table.ref th {
+    color: var(--fg-2); font-weight: 500;
+    font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .5px;
+  }
+  .ref-sort {
+    background: none; border: none; font: inherit; color: inherit;
+    padding: var(--s-1) var(--s-2); cursor: pointer; width: 100%; text-align: inherit;
+  }
+  .ref-sort:hover { color: var(--fg-0); }
+  table.ref td {
+    padding: var(--s-2);
+    border-bottom: 1px solid color-mix(in srgb, var(--bg-3) 50%, transparent);
+    vertical-align: top;
+  }
+  tr.ref-row { cursor: pointer; }
+  tr.ref-row:hover { background: var(--bg-1); }
+  tr.ref-row.is-selected { background: var(--bg-2); }
+  tr.ref-detail-row > td { background: var(--bg-1); padding: var(--s-3) var(--s-4); }
+  .pill {
+    display: inline-block;
+    font-size: var(--fs-xs); color: var(--fg-1);
+    background: var(--bg-2); border-radius: var(--r-sm);
+    padding: 1px 6px;
+  }
+
+  /* ---- brewing chain — docs/04-UIUX-SPEC.md §4.10 ---- */
+  .chain-spine { border-left: 2px solid var(--bg-3); padding-left: var(--s-3); }
+  .chain-step { margin-bottom: var(--s-2); }
+  .chain-from { color: var(--fg-1); }
+  .chain-add  { color: var(--info); font-size: var(--fs-sm); }
+  .chain-out  { color: var(--fg-0); font-weight: 600; }
+  .chain-dur  {
+    font-family: var(--font-mono); color: var(--fg-1);
+    font-weight: 400; margin-left: var(--s-2);
+  }
+  .chain-variants { margin-top: var(--s-3); }
+  .chain-variant {
+    display: flex; gap: var(--s-2); align-items: baseline; flex-wrap: wrap;
+    padding: var(--s-1) 0 var(--s-1) var(--s-3);
+    border-left: 2px solid transparent;
+    font-size: var(--fs-sm);
+  }
+  .chain-variant.extended  { border-left-color: var(--ok); }
+  .chain-variant.amplified { border-left-color: var(--info); }
+  .chain-variant.splash    { border-left-color: var(--warn); }
+  .chain-variant.lingering { border-left-color: var(--end); }
+  .chain-variant.corrupt   { border-left-color: var(--nether); }
+  .chain-meta { display: grid; grid-template-columns: auto 1fr; gap: var(--s-1) var(--s-3);
+                margin: var(--s-3) 0 0; font-size: var(--fs-sm); }
+  .chain-meta dt { color: var(--fg-2); }
+  .chain-meta dd { margin: 0; color: var(--fg-1); }
+
+  /* ---- reverse lookup + footer ---- */
+  .have { margin-top: var(--s-5); max-width: 640px; }
+  .rl-group { margin-top: var(--s-2); }
+  .rl-title { font-size: var(--fs-xs); color: var(--fg-2); text-transform: uppercase;
+              letter-spacing: .5px; margin-bottom: var(--s-1); }
+  .rl-hit {
+    display: block; width: 100%; text-align: left;
+    background: var(--bg-1); border: var(--border); border-radius: var(--r-sm);
+    color: var(--fg-0); font: inherit; font-size: var(--fs-sm);
+    padding: var(--s-1) var(--s-2); margin-bottom: var(--s-1); cursor: pointer;
+  }
+  .rl-hit:hover { background: var(--bg-2); }
+  .rl-hit.static { cursor: default; }
+  .rl-hit.static:hover { background: var(--bg-1); }
+
+  .brew-footer {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5);
+    margin-top: var(--s-5); padding-top: var(--s-3);
+    border-top: var(--border);
+  }
+  ul.kv { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); color: var(--fg-1); }
+  ul.kv li { padding: 2px 0; }
+  @media (max-width: 640px) { .brew-footer { grid-template-columns: 1fr; } }
+
+  /* ---- import review table — docs/04-UIUX-SPEC.md §4.9 ---- */
+  table.review {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+  }
+  table.review th {
+    text-align: left;
+    color: var(--fg-2);
+    font-weight: 500;
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: var(--s-1) var(--s-2);
+    border-bottom: var(--border);
+  }
+  table.review td {
+    padding: 2px var(--s-2);
+    border-bottom: 1px solid color-mix(in srgb, var(--bg-3) 50%, transparent);
+  }
+  table.review td.coord { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
+  table.review input[type="text"], table.review select { font-size: var(--fs-sm); padding: 1px var(--s-1); }
+  table.review tr.row-off { opacity: .45; }
+  table.review select.needs { border-color: var(--warn); color: var(--warn); }
+  table.review select.guessed-sel { color: var(--warn); }
+  sup.guessed { color: var(--warn); font-size: 9px; margin-left: 2px; }
+
+  textarea#import-text {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    resize: vertical;
+  }
+
+  /* ---- toast — docs/04-UIUX-SPEC.md §4.11 ---- */
+  .toast {
+    position: fixed;
+    right: var(--s-4);
+    bottom: var(--s-5);
+    background: var(--bg-2);
+    border: var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow);
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--fs-sm);
+    z-index: 60;
+    animation: pop var(--motion-toast) ease-out;
+  }
+
+  /* ---- stub panels — docs/04-UIUX-SPEC.md §6 ---- */
+  .stub {
+    max-width: 520px;
+    margin: var(--s-6) auto;
+    text-align: center;
+    color: var(--fg-1);
+  }
+  .stub .glyph { font-size: 32px; display: block; margin-bottom: var(--s-3); }
+  .stub h2 { font-size: var(--fs-lg); color: var(--fg-0); margin: 0 0 var(--s-2); }
+  .stub ul {
+    text-align: left;
+    display: inline-block;
+    font-size: var(--fs-sm);
+    color: var(--fg-2);
+    margin: var(--s-3) 0 0;
+  }
+
+  /* ---- status bar ---- */
+  .statusbar {
+    flex: 0 0 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: 0 var(--s-4);
+    background: var(--bg-1);
+    border-top: var(--border);
+    color: var(--fg-1);
+    font-size: var(--fs-xs);
+  }

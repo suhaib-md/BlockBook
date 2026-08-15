@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "dataset": "brewing",
   "gameVersion": "1.21",
-  "verified": false,
-  "source": "minecraft.wiki, hand-entered 2026-08-14. Durations NOT yet verified against the installed game version.",
+  "verified": true,
+  "source": "minecraft.wiki, hand-entered 2026-08-14. Durations verified against the installed game version 2026-08-15.",
 
   "bases": [
     {

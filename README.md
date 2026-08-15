@@ -13,10 +13,10 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 
 | | |
 |---|---|
-| Current version | **`v0.3`** — Phases 0–6 done. Coordinates, portal validator, brewing. |
-| Next step | 🛑 **Use it for a week before Phase 7** (ADR-014) |
-| Tests | `node tests/run-all.mjs` — 400 checks, no dependencies |
-| Outstanding | Brewing **durations are unverified** — check against minecraft.wiki for your game version, then set `verified: true` |
+| Current version | **`v0.3`** — Phases 0–8. Modular source, Vite build, Tauri scaffold. |
+| Next milestone | `v1.0` — Phases 9–10: global hotkey, tray, portable `data.json` |
+| Tests | `npm test` — 571 checks, zero dependencies |
+| Reminder | Brewing durations verified for **1.21**. Set `verified: false` in `data/brewing.json` **and** the inline copy after any game update. |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 
 ---
@@ -50,26 +50,47 @@ BlockBook/
 ├─ README.md                 <- you are here
 ├─ BUILD_PLAN.md             <- original source plan
 ├─ .gitignore
-├─ index.html                <- the entire app (v0.x)
+├─ package.json              <- scripts: dev, build, tauri, test
+├─ vite.config.js
+├─ app-icon.png              <- source for `npx tauri icon`
+├─ src/                      <- the app
+│  ├─ index.html
+│  ├─ style.css
+│  ├─ util.js schema.js portals.js reftable.js    <- leaves: pure, import nothing
+│  ├─ locations.js brewing.js                     <- domain logic
+│  ├─ store.js                                    <- state + persistence
+│  ├─ views.js                                    <- HTML builders
+│  └─ main.js                                     <- boot, render, events
+├─ src-tauri/                <- Rust shell, tauri.conf.json, icons
 ├─ docs/                     <- all specification documents
-├─ tests/                    <- phase gates; `node tests/run-all.mjs`
+├─ tests/                    <- phase gates; `npm test`
 └─ data/
-   ├─ seed.json              <- the 15 real coordinates, pre-parsed
-   └─ brewing.json           <- brewing reference data (verify before shipping)
+   ├─ seed.json              <- the 15 real coordinates (Vite publicDir)
+   └─ brewing.json           <- brewing reference data
 ```
+
+Module dependencies run one way only, and a gate check enforces it — see
+[TRD §4](docs/02-TRD.md).
 
 ---
 
-## Quick start (once Phase 0 is done)
+## Quick start
 
 ```powershell
-# v0.x — no build step
-start index.html
-
-# v1.x — Tauri
 npm install
-npm run tauri dev
+npm run dev          # Vite dev server on http://localhost:1420
+npm test             # all phase gates, 571 checks
+
+npm run tauri dev    # native window (needs Rust + MSVC Build Tools)
+npm run tauri build  # .exe + installer
 ```
+
+**Prerequisites for the Tauri commands only** — the browser `npm run dev` needs none:
+
+1. **Node LTS 22+** — https://nodejs.org
+2. **Rust** — `rustup` from https://rustup.rs
+3. **MSVC C++ Build Tools** — "Desktop development with C++" workload (~6 GB)
+4. **WebView2** — already present on Windows 11
 
 ---
 

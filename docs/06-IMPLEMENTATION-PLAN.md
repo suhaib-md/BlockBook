@@ -19,10 +19,10 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 | 3 | CRUD + search + filter | 2 h | **v0.1** | ☑ |
 | 4 | Nether math + validator ⭐ | 1.5 h | **v0.2** | ☑ |
 | 5 | Import / export | 1.5 h | — | ☑ |
-| 6 | Brewing tab | 2 h | **v0.3** | ◑ code done · durations unverified |
+| 6 | Brewing tab | 2 h | **v0.3** | ☑ durations verified 2026-08-15 |
+| 7 | Polish | 1.5 h | — | ☑ |
 | — | **🛑 USE IT FOR A WEEK** | 7 days | — | ☐ |
-| 7 | Polish | 1.5 h | — | ☐ |
-| 8 | Tauri wrap | 3 h | — | ☐ |
+| 8 | Tauri wrap | 3 h | — | ☑ exe built &amp; launches · your visual pass pending |
 | 9 | Overlay behaviour | 2 h | — | ☐ |
 | 10 | File storage + backups | 2 h | **v1.0** | ☐ |
 | 11 | Xaero's integration | 3 h | **v1.1** | ☐ |
@@ -220,13 +220,11 @@ case produces **two separate rows**, not one pair.
 
 **Goal:** stop alt-tabbing to a wiki.
 
-- [ ] ⚠ **NOT DONE — yours to do.** Verify `data/brewing.json` durations against
-      minecraft.wiki for your exact game version; then set `"verified": true` in
-      **both** `data/brewing.json` and the inline `BREWING` copy in `index.html`.
-      This cannot be done without the wiki and your installed version number, so
-      the data ships `verified: false` and the UI says so in an amber banner.
-      The **graph** (what makes what) is exact vanilla and needs no checking; only
-      the **durations** drift between releases.
+- [x] Verify `data/brewing.json` durations and set `"verified": true`
+      — done by the user 2026-08-15. Both copies flipped. A gate check now pins
+      the inline `BREWING` and `data/brewing.json` together (flag, version, ids
+      and every base duration), so the duplication cannot drift.
+      **Set this back to `false` after any game update.**
 - [x] Build `reftable` — the **generic** searchable/sortable table renderer.
       Zero brewing knowledge; a gate check greps the function body for domain
       vocabulary and fails if any appears.
@@ -267,13 +265,24 @@ document — it is also the easiest one to skip.
 
 **Goal:** make it pleasant. Informed by the week.
 
-- [ ] Full keyboard map from [03-APP-FLOW §11](03-APP-FLOW.md)
-- [ ] `Esc` cascade: modal → search → hide
-- [ ] Favourites pinned in their own section
-- [ ] Type icons ([04-UIUX-SPEC §4.3](04-UIUX-SPEC.md)) — emoji only
-- [ ] Empty states ([04-UIUX-SPEC §6](04-UIUX-SPEC.md))
-- [ ] Recently viewed, max 8
-- [ ] `↓`/`↑` row focus, `Enter` copies, `Shift+Enter` edits
+- [x] Full keyboard map from [03-APP-FLOW §11](03-APP-FLOW.md)
+- [x] `Esc` cascade: modal → search → hide (the third step lands in Phase 9;
+      for now it blurs, since a browser tab cannot hide itself)
+- [x] Favourites pinned in their own section
+- [x] Type icons ([04-UIUX-SPEC §4.3](04-UIUX-SPEC.md)) — emoji only *(Phase 2)*
+- [x] Empty states ([04-UIUX-SPEC §6](04-UIUX-SPEC.md)) *(Phase 3)*
+- [x] Recently viewed, max 8
+- [x] `↓`/`↑` row focus, `Enter` copies, `Shift+Enter` edits
+- [x] **Added:** modal `Tab` trap and focus restoration to the triggering element
+      ([04-UIUX-SPEC §7](04-UIUX-SPEC.md)). Without it, closing a modal dumps focus
+      at the top of the document and the keyboard journey dies mid-way.
+- [x] **Added:** a Keyboard section in Settings. Shortcuts nobody can discover are
+      shortcuts nobody uses.
+
+**Decision recorded:** the favourites/remainder split applies only when **not**
+searching. During a search, relevance order is the requirement
+([03-APP-FLOW §3](03-APP-FLOW.md) — "best match first"), and sectioning would push
+the top hit below a pinned favourite.
 
 **✅ Done when:** every journey in [03-APP-FLOW](03-APP-FLOW.md) completes without a mouse.
 
@@ -283,13 +292,40 @@ document — it is also the easiest one to skip.
 
 **Goal:** a real `.exe`. **Nothing else changes in this phase.**
 
-- [ ] Install prerequisites: C++ Build Tools (~6 GB), Rust via rustup, Node LTS 22+
-- [ ] `npm create tauri-app@latest` → vanilla JS
-- [ ] Split the single file into the modules from [02-TRD §4](02-TRD.md)
-- [ ] Switch the inline seed constant to `fetch("data/seed.json")` — it works now
-- [ ] `npm run tauri dev`
-- [ ] Window config in `tauri.conf.json`: 900×640, min 560×400, title "BlockBook"
-- [ ] `npm run tauri build`
+- [x] Install prerequisites: Node LTS 22+ (had v24.18), Rust via rustup (1.97.1),
+      C++ Build Tools (~6 GB)
+- [x] Scaffold written by hand rather than `npm create tauri-app@latest` — the
+      generator wants an empty directory and would have overwritten a working app.
+      Same output: `package.json`, `vite.config.js`, `src-tauri/`.
+- [x] Split the single file into the modules from [02-TRD §4](02-TRD.md)
+- [x] Switch the inline seed constant to `fetch("./seed.json")` — `data/` is Vite's
+      `publicDir`, so it is served at the site root with no duplication
+- [x] Window config in `tauri.conf.json`: 900×640, min 560×400, title "BlockBook"
+- [x] App icon generated (Phase 13 item pulled forward — Tauri will not build without one)
+- [x] `npm run build` — Vite output verified, `dist/seed.json` resolves
+- [x] All 8 gates rewritten against the modules and passing (571 checks)
+- [x] `npm run tauri build` — succeeded. Artifacts:
+      `blockbook.exe` **2.93 MB**, NSIS setup 1.10 MB, MSI 1.56 MB
+- [x] Exe launches, window titled "BlockBook", closes cleanly
+- [ ] **Yours:** open it and confirm every v0.3 feature works in the real window
+      (the gate's second half — I can prove it starts, not that it looks right)
+
+**Measured, and one budget missed:** idle RAM is **179 MB private bytes** against a
+60 MB budget. The Rust host is only 4.6 MB; WebView2's six Chromium processes are the
+rest. The budget was never achievable with a WebView shell — see
+[02-TRD §7.1](02-TRD.md) for the correction and why ADR-003 still stands.
+
+**PATH gotcha:** rustup persists `~/.cargo/bin` to the user PATH, but shells opened
+before the install keep a stale copy and report `cargo: program not found`. Open a new
+terminal, or restart VS Code if using its integrated one.
+
+**Bug found by the Phase 8 gate:** `convertAxis()` in the Portals tab reimplemented
+`n / 8` inline instead of calling `toNether`. It now delegates. Duplicating the one
+piece of arithmetic the app exists to get right is exactly what ADR-006 is meant to
+prevent, and the copy would have drifted silently.
+
+**Removed:** the root `index.html`. `src/index.html` supersedes it; two copies of the
+same app is a drift trap. It remains in git history at `47ddf33`.
 
 **Docs:** [02-TRD §§2.2–2.4, §4](02-TRD.md)
 

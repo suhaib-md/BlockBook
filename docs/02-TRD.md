@@ -154,27 +154,50 @@ let state = {
 
 | Module | Responsibility | Must not |
 |---|---|---|
-| `main.js` | Bootstrap, tab routing, global keyboard handler, wiring | Contain business logic |
-| `store.js` | Load, save, schema detection, migration, backup rotation, atomic write | Know about the DOM |
-| `locations.js` | Location CRUD, search, filter, sort, validation | Know about portals' link math |
-| `portals.js` | `toNether`, `toOverworld`, `findLinkConflicts`, `linkHealth`, distance | Touch storage |
-| `brewing.js` | Brewing tab: tree rendering, reverse ingredient lookup | Duplicate `reftable.js` |
+| `util.js` | `esc()`. Nothing else. | Touch the DOM — see below |
+| `schema.js` | Enums, Y ranges, normalisation, link invariants | Know about rendering |
+| `portals.js` | `toNether`, `toOverworld`, `findLinkConflicts`, `linkHealth`, distance | Touch storage or the DOM |
 | `reftable.js` | **One** generic searchable/sortable table renderer | Contain any domain knowledge |
-| `xaero.js` | Waypoint parse + serialise, backup-before-write | Be trusted; it is best-effort |
+| `locations.js` | Validation, search, filter, sort, text importer | Know about storage |
+| `brewing.js` | Brewing data, chain building, reverse lookup, its renderers | Read application state |
+| `store.js` | State, load, save, migration, backups, every mutation | Know about the DOM |
+| `views.js` | HTML builders for every tab and modal | Mutate state |
+| `main.js` | Bootstrap, the single render path, all event wiring | Contain business logic |
+| `xaero.js` | Waypoint parse + serialise, backup-before-write *(Phase 11)* | Be trusted; it is best-effort |
 | `style.css` | All styling, tokens at `:root` | Use `!important` |
 
 **Dependency rule — one direction only:**
 
 ```
 main.js
-  ├─▶ store.js          (no dependencies)
-  ├─▶ locations.js ─────▶ portals.js
-  ├─▶ brewing.js ───────▶ reftable.js
-  └─▶ xaero.js ─────────▶ portals.js
+  └─▶ views.js
+        ├─▶ store.js ────┐
+        ├─▶ brewing.js ──┼─▶ reftable.js ─┐
+        ├─▶ locations.js ┴─▶ schema.js    ├─▶ util.js
+        └─▶ portals.js ───────────────────┘
 ```
 
-`portals.js` and `reftable.js` are leaves. They import nothing from the app. That is
-what makes them testable in isolation and reusable — keep it that way.
+`util.js`, `schema.js` and `portals.js` are leaves — they import nothing at all and
+touch no DOM, no state and no storage. That is what makes them testable in isolation.
+A Phase 8 gate check enforces every arrow: a module may only import from lower in the
+list, and the three leaves are grepped for `document`, `window`, `localStorage` and
+`state`.
+
+**Deviations from the original four-module sketch, all deliberate:**
+
+- **`util.js` and `schema.js` added.** `esc()` is needed by three modules, and the
+  data-model constants are needed by four. Both are leaves, so they deepen the graph
+  without complicating it.
+- **`views.js` added.** Folding ~800 lines of HTML builders into `main.js` would have
+  pushed it past the ADR-002 revisit trigger on its own.
+- **`$` lives in `views.js`, not `util.js`.** It is the only DOM-touching helper;
+  keeping it out of `util.js` is what makes "the leaves are pure" a checkable claim
+  rather than an aspiration.
+- **`store.js` must not import `views.js`.** `writeNow()` originally called
+  `renderStatusBar()` directly, which is a cycle. It now calls an
+  `onSaveStatusChange` callback that `main.js` installs at boot.
+- **`brewing.js` takes its UI slice as an argument.** It sits below `store.js`, so
+  `brewingPanelHTML(ui, haveQuery)` is injected rather than reading `state`.
 
 ---
 
@@ -305,8 +328,8 @@ boolean. The UI shows an unobtrusive "unverified for your version" hint while
 | | Cold start → interactive < 1.5 s | Manual timing |
 | | Full render of 500 locations < 100 ms | `performance.now()` around `render()` |
 | | Search keystroke → updated list < 50 ms | Same |
-| **Resource** | Idle RAM < 60 MB | Task Manager, app idle 60 s |
-| | Installed size < 20 MB | Explorer properties on the build output |
+| **Resource** | ~~Idle RAM < 60 MB~~ → **< 200 MB private bytes** | Whole process tree, idle 60 s. **Revised after measurement — see §7.1** |
+| | Installed size < 20 MB | Explorer properties on the build output. **Met: 2.93 MB exe** |
 | **Reliability** | Zero data-loss incidents | Backup directory non-empty and valid after every session |
 | | Corrupt `data.json` never blocks startup | Fault-injection test — see [09-TESTING-QA](09-TESTING-QA.md) |
 | **Portability** | Folder copy fully restores state on another PC | Success criterion S6 |
@@ -316,6 +339,46 @@ boolean. The UI shows an unobtrusive "unverified for your version" hint while
 | | Text contrast ≥ 4.5:1 | Contrast checker on the dark theme tokens |
 | **Maintainability** | No module over ~1500 lines | Line count check at each phase gate |
 | | A new reference tab takes < 2 hrs | Timed when Phase 12 starts |
+
+---
+
+### 7.1 Measured at Phase 8 — the RAM budget was wrong
+
+First real measurement of the built exe, idle 60 s, whole process tree:
+
+| Metric | Budget | Measured | Verdict |
+|---|---|---|---|
+| Installed size (exe) | < 20 MB | **2.93 MB** | ✅ comfortably |
+| NSIS installer | — | 1.10 MB | — |
+| MSI installer | — | 1.56 MB | — |
+| Rust host process alone | — | **4.6 MB private** | ✅ matches the ~30–40 MB claim's intent |
+| **Whole tree, private bytes** | < 60 MB | **179 MB** | ❌ **3× over** |
+| Whole tree, working set | — | 383 MB | (double-counts shared pages) |
+
+**What went wrong in the estimate.** ADR-003 justified Tauri partly on "~30–40 MB idle".
+That figure describes the *Rust host*, which measured 4.6 MB private — better than
+claimed. What it ignored is that WebView2 spawns **six Chromium processes** (browser,
+GPU, renderer, network, utility, crashpad), and those are the bulk of the footprint.
+The 60 MB budget was never achievable with any WebView-based shell.
+
+**Does this invalidate ADR-003?** No — the comparison still favours Tauri. Electron
+would bundle its own Chromium (adding ~100 MB to the binary) *and* spawn the same
+process family with no sharing. WebView2 pages are shared with any other WebView2 app
+already running, so BlockBook's marginal cost on a machine already running one is
+lower than 179 MB. The decision holds; only the number was wrong.
+
+**Two measurement traps worth recording**, both of which produced wrong answers first:
+
+1. **Counting every `msedgewebview2.exe` on the machine.** 18 were already running
+   from other apps before launch. That gave 701 MB. Always walk the actual process
+   tree from the app's PID.
+2. **Using working set instead of private bytes.** Working set counts shared Chromium
+   pages once per process, inflating a 6-process tree to 383 MB. Private bytes (179 MB)
+   is the honest figure for memory attributable to this app.
+
+**Action:** budget revised to < 200 MB private bytes. If that matters, the lever is
+Phase 9's compact mode plus hide-to-tray — a hidden window lets WebView2 release
+renderer memory — not a different shell.
 
 ---
 

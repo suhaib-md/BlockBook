@@ -25,12 +25,14 @@ const GATES = [
   ["4", "Portal maths — golden cases G1-G9"],
   ["5", "Import / export + Notepad importer"],
   ["6", "Brewing tab + generic reftable"],
+  ["7", "Keyboard, favourites, recently viewed"],
+  ["8", "Module split + Tauri scaffold"],
 ];
 
 let total = 0, failed = 0;
 
 for (const [n, label] of GATES) {
-  const r = spawnSync(process.execPath, [join(here, `phase${n}-gate.mjs`), app], { encoding: "utf8" });
+  const r = spawnSync(process.execPath, [join(here, `phase${n}-gate.mjs`)], { encoding: "utf8" });
   const out = (r.stdout ?? "") + (r.stderr ?? "");
   const passes = (out.match(/^PASS/gm) ?? []).length;
   const fails  = (out.match(/^FAIL/gm) ?? []).length;

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BlockBook</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">&#9935; BlockBook</div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+    <button class="icon-btn" data-act="settings" title="Settings">&#9881;</button>
+  </header>
+  <input type="file" id="file-input" accept="application/json,.json" hidden>
+
+  <div id="banner"></div>
+  <div class="toolbar" id="toolbar"></div>
+  <main id="panel"></main>
+  <footer class="statusbar" id="statusbar"></footer>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
