@@ -143,6 +143,71 @@ function portalWarnings(loc, all) {
   return out;
 }
 
+/* --------------------------------------------------------------------------
+   DISTANCE / NEAREST — docs/07-ALGORITHMS.md §5
+   -------------------------------------------------------------------------- */
+
+/**
+ * 3D distance. `y ?? 64` substitutes a plausible surface level for records with
+ * an unknown Y — a heuristic that only affects ranking, never portal logic.
+ */
+function dist3(a, b) {
+  return Math.hypot(a.x - b.x, (a.y ?? 64) - (b.y ?? 64), a.z - b.z);
+}
+
+/**
+ * Put a location on the Overworld scale so cross-dimension distances are
+ * comparable at all. The End has no scaling relationship with anything and must
+ * be filtered out by the caller.
+ */
+function normalised(loc) {
+  if (loc.dimension === "nether") {
+    const { x, z } = toOverworld(loc.x, loc.z);
+    return { ...loc, x, z };
+  }
+  return loc;
+}
+
+/**
+ * Locations closest to a point, nearest first.
+ *
+ * `approx` marks a cross-dimension result. Those distances are *scale*
+ * distances, not travel distances: a nether location 100 overworld-equivalent
+ * blocks away is only reachable if a portal pair actually connects there.
+ * Presenting it as a plain number would imply a walkability that does not exist,
+ * so the UI must show the flag.
+ *
+ * @param {{dimension, x, y, z, id?}} point
+ * @param {Location[]} all
+ * @param {{limit?: number, sameDimensionOnly?: boolean}} opts
+ * @returns {{location, distance, approx}[]}
+ */
+function nearestTo(point, all, { limit = 8, sameDimensionOnly = false } = {}) {
+  if (!Number.isInteger(point?.x) || !Number.isInteger(point?.z)) return [];
+  if (point.dimension === "end" && !sameDimensionOnly) {
+    // The End cannot be compared to anything else; only same-dimension makes sense.
+    sameDimensionOnly = true;
+  }
+
+  const origin = normalised(point);
+
+  return all
+    .filter(l => l.id !== point.id)
+    .filter(l => Number.isInteger(l.x) && Number.isInteger(l.z))
+    .filter(l => (sameDimensionOnly
+      ? l.dimension === point.dimension
+      // Without sameDimensionOnly the End is excluded: normalising it would be
+      // a confident lie.
+      : l.dimension !== "end" && point.dimension !== "end"))
+    .map(l => ({
+      location: l,
+      distance: dist3(origin, normalised(l)),
+      approx: l.dimension !== point.dimension,
+    }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, limit);
+}
+
 /** Portals whose declared pair does not actually connect. Surfaced prominently. */
 function brokenPairs(all) {
   const seen = new Set();
@@ -170,4 +235,7 @@ export {
   fmtDist,
   portalWarnings,
   brokenPairs,
+  dist3,
+  normalised,
+  nearestTo,
 };

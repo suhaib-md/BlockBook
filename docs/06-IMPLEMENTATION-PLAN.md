@@ -25,7 +25,7 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 | 8 | Tauri wrap | 3 h | — | ☑ exe built &amp; launches · your visual pass pending |
 | 9 | Overlay behaviour | 2 h | — | ☑ built &amp; close-to-tray verified · hotkey needs your test |
 | 10 | File storage + backups | 2 h | **v1.0** | ☑ code + gates · S1–S10 on the real exe pending |
-| 11 | Xaero's integration | 3 h | **v1.1** | ☐ |
+| 11 | ~~Xaero's~~ → Distance / nearest-to | 3 h | **v1.1** | ☑ waypoint sync dropped, ADR-017 |
 | 12 | More reference tabs | 2 h each | **v1.2** | ☐ |
 | 13 | Ship properly | 2 h | — | ☐ |
 
@@ -448,9 +448,37 @@ from a backup **without overwriting the corrupt file**.
 
 ---
 
-## PHASE 11 — Xaero's integration · 2–3 hrs → **ships v1.1**
+## PHASE 11 — ~~Xaero's integration~~ → Distance / nearest-to → **ships v1.1**
 
-**Goal:** the app and the in-game map stay in sync.
+> ⚠️ **Rescoped 2026-08-16.** Xaero's Minimap was uninstalled (Minecraft was running
+> badly). Verified on the machine: no `XaeroWaypoints/`, no `journeymap/`, and no
+> `mw*.txt` anywhere under `.minecraft`. Waypoint sync therefore has no source, no
+> destination, and no way to verify a format — see
+> [ADR-017](10-DECISIONS-AND-RISKS.md). **Only the distance tools were built.**
+>
+> Everything below the divider is preserved unchanged and applies as-is if a minimap
+> mod is ever installed again.
+
+**Built (F27 — distance / nearest-to):**
+
+- [x] `dist3`, `normalised`, `nearestTo` in `portals.js`, which stays a pure leaf
+- [x] "What's near me?" panel on the Portals tab: dimension, X/Y/Z, a
+      same-dimension-only toggle, and a "start from a saved location" picker
+- [x] Cross-dimension results **flagged `≈` and explained** — that is a *scale*
+      distance, not a walk. Presenting it as a plain number would imply a
+      walkability that does not exist ([07-ALGORITHMS §5.2](07-ALGORITHMS.md)).
+- [x] Optional Y: a `null` Y is treated as 64 for **ranking only**, never for portal maths
+- [x] The End is excluded from cross-dimension comparison; searching *from* the End
+      returns only End locations
+- [x] Every control has a stable `id` — the Phase 7 focus lesson applied up front
+
+**Verified against an independent calculation:** the gate recomputes the top hit and
+its distance by hand rather than trusting the function under test.
+
+---
+
+**Original goal (preserved for if a minimap ever returns):** the app and the in-game
+map stay in sync.
 
 - [ ] **First, before writing any code:** open your real waypoint file and count the
       fields. Do not trust any documented layout, including the one in

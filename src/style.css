@@ -241,6 +241,24 @@
   .recent:hover { background: var(--bg-2); color: var(--fg-0); }
   .recent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+  /* ---- "What's near me?" — docs/07-ALGORITHMS.md §5 ---- */
+  .nearby { margin-top: var(--s-5); }
+  .near-form {
+    background: var(--bg-1);
+    border: var(--border);
+    border-radius: var(--r-md);
+    padding: var(--s-3);
+    margin-bottom: var(--s-3);
+  }
+  .near-form .row3 label {
+    display: flex; align-items: center; gap: var(--s-2);
+    color: var(--fg-1); font-size: var(--fs-sm);
+  }
+  .near-form .row3 input {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
   .storage-path {
     margin: 0 0 var(--s-2);
     padding: var(--s-2);

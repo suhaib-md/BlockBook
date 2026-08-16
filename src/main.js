@@ -368,6 +368,11 @@ function onConverterInput(el) {
 document.addEventListener("input", (e) => {
   if (e.target.id === "search") { state.ui.search = e.target.value; render(); return; }
   if (e.target.classList?.contains("conv-in")) { onConverterInput(e.target); return; }
+  if (e.target.classList?.contains("near-in")) {
+    state.ui.near[e.target.dataset.axis] = e.target.value;
+    render();
+    return;
+  }
   if (e.target.classList?.contains("ref-search")) {
     refSlice(e.target.dataset.ref).search = e.target.value;
     render();
@@ -414,6 +419,27 @@ document.addEventListener("change", (e) => {
   if (e.target.id === "sort")        { state.ui.sort = e.target.value; render(); return; }
   if (e.target.id === "type-filter") { state.ui.filters.type = e.target.value || null; render(); return; }
   if (e.target.classList?.contains("conv-in")) { onConverterInput(e.target); return; }
+  if (e.target.name === "near-dim")  { state.ui.near.dimension = e.target.value; render(); return; }
+  if (e.target.id === "near-same")   { state.ui.near.sameOnly = e.target.checked; render(); return; }
+  if (e.target.id === "near-from") {
+    // Prefill from a saved location, so you can ask "what is near Home?" without
+    // retyping coordinates.
+    const loc = activeLocations().find(l => l.id === e.target.value);
+    if (loc) {
+      state.ui.near = {
+        dimension: loc.dimension,
+        x: String(loc.x), y: loc.y === null ? "" : String(loc.y), z: String(loc.z),
+        sameOnly: state.ui.near.sameOnly,
+      };
+      render();
+    }
+    return;
+  }
+  if (e.target.classList?.contains("near-in")) {
+    state.ui.near[e.target.dataset.axis] = e.target.value;
+    render();
+    return;
+  }
   if (e.target.classList?.contains("ref-filter")) {
     const s = refSlice(e.target.dataset.ref);
     s.filters = { ...s.filters, [e.target.dataset.key]: e.target.value || null };

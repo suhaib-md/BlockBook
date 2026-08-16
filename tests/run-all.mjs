@@ -29,6 +29,7 @@ const GATES = [
   ["8", "Module split + Tauri scaffold"],
   ["9", "Overlay: hotkey, tray, always-on-top"],
   ["10", "File storage, atomic writes, backups"],
+  ["11", "Distance / nearest-to"],
 ];
 
 let total = 0, failed = 0, brokenGates = 0;

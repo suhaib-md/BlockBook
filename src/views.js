@@ -5,7 +5,7 @@
 
 import { esc } from "./util.js";
 import { DIMENSIONS, HOTKEY_OPTIONS, LOCATION_TYPES, SCHEMA_VERSION, Y_RANGES } from "./schema.js";
-import { LINK_RADIUS, brokenPairs, counterpart, destinationDimension, findLinkConflicts, fmtDist, linkHealth, portalWarnings, toNether, toOverworld } from "./portals.js";
+import { LINK_RADIUS, brokenPairs, counterpart, destinationDimension, findLinkConflicts, fmtDist, linkHealth, nearestTo, portalWarnings, toNether, toOverworld } from "./portals.js";
 import { draftToLocation, tpCommand, validateLocation, visibleLocations } from "./locations.js";
 import { brewingPanelHTML } from "./brewing.js";
 import { STORAGE_KEY, activeLocations, save, saveStatus, state } from "./store.js";
@@ -454,6 +454,75 @@ function converterHTML() {
   `;
 }
 
+/* ---- "What's near me?" — docs/07-ALGORITHMS.md §5 ---- */
+
+function nearbyPanelHTML() {
+  const n = state.ui.near;
+  const all = activeLocations();
+  const usable = /^-?\d+$/.test(n.x.trim()) && /^-?\d+$/.test(n.z.trim());
+
+  const origin = usable ? {
+    dimension: n.dimension,
+    x: Math.floor(Number(n.x)),
+    y: /^-?\d+$/.test(n.y.trim()) ? Math.floor(Number(n.y)) : null,
+    z: Math.floor(Number(n.z)),
+    id: null,
+  } : null;
+
+  const hits = origin ? nearestTo(origin, all, { limit: 8, sameDimensionOnly: n.sameOnly }) : [];
+  const anyApprox = hits.some(h => h.approx);
+
+  return `
+    <section class="nearby">
+      <div class="section-label">What's near me?</div>
+      <div class="near-form">
+        <div class="radios">
+          ${DIMENSIONS.map(d => `
+            <label for="near-dim-${d}"><input type="radio" name="near-dim" id="near-dim-${d}"
+                   value="${d}"${n.dimension === d ? " checked" : ""}> ${esc(DIM_NAME[d])}</label>`).join("")}
+        </div>
+        <div class="row3" style="margin-top:var(--s-2)">
+          <label for="near-x">X <input type="text" inputmode="numeric" id="near-x" class="near-in"
+                 data-axis="x" value="${esc(n.x)}" autocomplete="off"></label>
+          <label for="near-y">Y <input type="text" inputmode="numeric" id="near-y" class="near-in"
+                 data-axis="y" value="${esc(n.y)}" autocomplete="off" placeholder="optional"></label>
+          <label for="near-z">Z <input type="text" inputmode="numeric" id="near-z" class="near-in"
+                 data-axis="z" value="${esc(n.z)}" autocomplete="off"></label>
+        </div>
+        <div class="checkline" style="margin-top:var(--s-2)">
+          <input type="checkbox" id="near-same"${n.sameOnly ? " checked" : ""}>
+          <label for="near-same" style="margin:0">This dimension only</label>
+          <span class="spacer"></span>
+          <label for="near-from" class="hint" style="margin:0">or start from</label>
+          <select id="near-from">
+            <option value="">a saved location…</option>
+            ${all.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      ${!usable ? `<p class="hint">Enter an X and a Z — press F3 in game to read them.</p>` : hits.length === 0
+        ? `<p class="hint">Nothing else recorded${n.sameOnly ? ` in the ${esc(DIM_NAME[n.dimension])}` : ""}.</p>`
+        : `<div class="list">${hits.map(h => `
+            <article class="card" id="card-${esc(h.location.id)}" data-id="${esc(h.location.id)}"
+                     tabindex="0" role="listitem">
+              <div class="card-main">
+                <span class="card-icon">${TYPE_ICONS[h.location.type] ?? TYPE_ICONS.misc}</span>
+                <span class="card-name">${esc(h.location.name)}</span>
+                <span class="coord">${coordHTML(h.location)}</span>
+                <span class="badge ${esc(h.location.dimension)}">${DIM_LABEL[h.location.dimension] ?? "??"}</span>
+                <span class="health ${h.approx ? "warn" : "muted"}"
+                      title="${h.approx ? "Scale distance across dimensions — only reachable if a portal pair connects here." : "Straight-line distance."}">
+                  ${fmtDist(h.distance)}${h.approx ? " ≈" : ""}
+                </span>
+              </div>
+            </article>`).join("")}</div>
+           ${anyApprox ? `<p class="hint">≈ marks a cross-dimension result. That is a
+             <strong>scale</strong> distance, not a walk — you can only get there if a
+             portal pair actually links the two.</p>` : ""}`}
+    </section>`;
+}
+
 function portalsPanelHTML() {
   const all = activeLocations();
   const portals = all.filter(l => l.type === "portal");
@@ -462,6 +531,7 @@ function portalsPanelHTML() {
 
   return `
     ${converterHTML()}
+    ${nearbyPanelHTML()}
     <div class="section-label" style="margin-top:var(--s-5)">
       All portals &middot; ${portals.length}
       ${broken.length ? `<span class="health bad">&middot; ${broken.length} broken pair${broken.length > 1 ? "s" : ""}</span>` : ""}

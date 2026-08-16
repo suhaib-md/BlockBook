@@ -15,8 +15,8 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 |---|---|
 | Current version | **`v1.0` candidate** — Phases 0–10. Native exe, portable `data.json`, atomic writes, rolling backups. |
 | Before calling it v1.0 | Walk the [six success criteria](docs/01-PRD.md) and the S1–S10 data-safety tests on the real exe |
-| Next milestone | `v1.1` — Phase 11: Xaero's waypoint sync, distance tools |
-| Tests | `npm test` — 765 checks, zero dependencies |
+| Next milestone | `v1.2` — Phase 12: enchanting, mob, villager and fuel reference tabs |
+| Tests | `npm test` — 824 checks, zero dependencies |
 | Reminder | Brewing durations verified for **1.21**. Set `verified: false` in `data/brewing.json` **and** the inline copy after any game update. |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 
@@ -80,7 +80,7 @@ Module dependencies run one way only, and a gate check enforces it — see
 ```powershell
 npm install
 npm run dev          # Vite dev server on http://localhost:1420
-npm test             # all phase gates, 765 checks
+npm test             # all phase gates, 824 checks
 
 npm run tauri dev    # native window (needs Rust + MSVC Build Tools)
 npm run tauri build  # .exe + installer
@@ -121,5 +121,10 @@ aside rather than overwritten, and the newest *parseable* backup is loaded in it
   will fire constantly ([ADR-015](docs/10-DECISIONS-AND-RISKS.md)).
 - Brewing durations shift between game versions. Spot-check `data/brewing.json`
   against minecraft.wiki for your version before trusting it.
-- Xaero's waypoint file format has changed across mod versions. Never write to a
-  waypoint file without backing it up first.
+- **No minimap sync.** Waypoint import/export was dropped in Phase 11 — no minimap
+  mod is installed, so there is nothing to read or write and no way to verify a
+  format ([ADR-017](docs/10-DECISIONS-AND-RISKS.md)). The Portals tab's
+  **What's near me?** panel covers the "where am I relative to my stuff" question
+  instead. If a minimap is ever reinstalled, Phase 11's original checklist still
+  applies — starting with reading the real waypoint file rather than trusting any
+  documented layout.

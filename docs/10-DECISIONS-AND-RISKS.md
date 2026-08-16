@@ -237,6 +237,41 @@ Enforced by a gate: if a new tab needs renderer changes, fix the renderer, not t
 
 ---
 
+## ADR-017 — Waypoint sync dropped; Phase 11 keeps only the distance tools
+
+**Status:** Accepted · **Phase:** 11 · **Supersedes** the Xaero's integration half of
+Phase 11
+
+**Context.** The user removed Xaero's Minimap because Minecraft was running badly.
+Checked on the machine: `XaeroWaypoints/` is gone, `journeymap/` never existed, and a
+recursive search for `mw*.txt` under `.minecraft` returns nothing. Only
+`xaeroworldmap` remains installed, and the World Map does not own waypoints.
+
+**Decision.** Do not build waypoint import/export. Build the mod-independent half of
+Phase 11 — distance and nearest-to (F27) — and ship that as v1.1.
+
+**Why not build it anyway.** The plan's own first instruction was *"open one of your
+own waypoint files first and count the fields… do not trust the layout above."* With
+no file in existence that step is impossible, so any parser would be written against
+a format nobody can check, for a mod that is not installed, producing output nothing
+would read. That is precisely the failure R-06 describes, with none of the payoff.
+
+**Consequences.**
+
+- v1.1 ships the distance tools instead. Losing the minimap arguably makes them *more*
+  useful: without in-game waypoint markers, "what is near these coordinates?" is the
+  question the app now has to answer.
+- The work is revivable. If a minimap mod is ever installed, Phase 11's original
+  checklist still applies unchanged — starting with reading the real file.
+- A gate check asserts no waypoint code exists, so this stays a deliberate absence
+  rather than something half-written and forgotten.
+
+**Not decided here:** whether BlockBook should compensate for the missing minimap in
+any larger way. A map renderer remains an explicit non-goal
+([01-PRD §5](01-PRD.md)) and losing the mod does not change that.
+
+---
+
 ## ADR-016 — File I/O lives in Rust, not behind `plugin-fs`
 
 **Status:** Accepted · **Phase:** 10 · **Refines** ADR-008

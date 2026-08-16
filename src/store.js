@@ -27,6 +27,8 @@ let state = {
     confirmId:      null,
     ignoreConflict: false,           // per-edit-session only; never persisted
     conv:           { src: "overworld", x: "", z: "" },   // Portals tab converter
+    // "What's near me?" — raw strings for the same typing reason as the draft.
+    near:           { dimension: "overworld", x: "", y: "", z: "", sameOnly: false },
     import:         { rows: [], unrecognised: [] },
     pendingImport:  null,
     brewHave:       "",
