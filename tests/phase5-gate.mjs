@@ -8,7 +8,7 @@ const store = await import("../src/store.js");
 const views = await import("../src/views.js");
 
 const SEED = seedLocations();
-reload(store, SEED);
+await reload(store, SEED);
 
 console.log("=== parseLine ===");
 let p = loc.parseLine("Home - 221/65/374");
@@ -83,11 +83,11 @@ check(!/data-act="commit-text-import"[^>]*disabled/.test(review), "I8 unlocks on
 console.log("\n=== I9/I10/I11: committing a text import ===");
 const disk = new Map();
 installDOM({ store: disk });
-reload(store, SEED);
+await reload(store, SEED);
 const before = store.activeLocations().length;
 const rowsT = loc.buildImportRows(TEXT).rows;
 for (const r of rowsT) if (r.checked) r.dimension ??= "overworld";
-eq(store.commitTextImport(rowsT), 4, "4 checked rows imported (the unnamed one stays out)");
+eq(await store.commitTextImport(rowsT), 4, "4 checked rows imported (the unnamed one stays out)");
 eq(store.activeLocations().length, before + 4, "I9 import APPENDS — existing rows untouched");
 check(store.activeLocations().some(l => l.id === "loc_001"), "I9 original seed rows still present");
 check([...disk.keys()].some(k => k.includes("backup-before-text-import")), "I10 a backup was written first");
@@ -97,7 +97,7 @@ check(imported.tags.includes("imported"), "imported rows are tagged");
 
 const clean = new Map();
 installDOM({ store: clean });
-reload(store, SEED);
+await reload(store, SEED);
 const beforeC = store.activeLocations().length;
 store.state.ui.import = loc.buildImportRows(TEXT);
 views.importReviewModalHTML();
@@ -139,20 +139,21 @@ eq(m.added[0].id, "3", "the new one is added");
 console.log("\n=== THE PHASE 5 GATE: export -> wipe -> import ===");
 const d1 = new Map();
 installDOM({ store: d1 });
-reload(store, SEED);
+await reload(store, SEED);
 store.commitLocation({ id: null, name: "Netherite Stash", dimension: "nether", x: -212, y: 14, z: 88,
                        type: "mine", tags: ["debris"], notes: "", linkedPortalId: null, favorite: true });
-store.flush();
+await store.flush();
 const exported = store.exportPayload();
 eq(JSON.parse(exported).worlds[0].locations.length, 16, "exported 16 locations");
 
 const d2 = new Map();                 // brand-new profile, empty storage
 installDOM({ store: d2 });
-reload(store, SEED);
+await reload(store, SEED);
 eq(store.activeLocations().length, 15, "fresh profile re-seeds to 15");
 const v = loc.validateImportPayload(JSON.parse(exported));
 check(v.ok, "the export validates");
-eq(store.commitJsonImport(v.locations, "replace").added, 16, "replace installed 16");
+// Parens matter: `await x().added` would read .added off the Promise.
+eq((await store.commitJsonImport(v.locations, "replace")).added, 16, "replace installed 16");
 eq(store.activeLocations().length, 16, "GATE: all 16 locations restored");
 
 const stash = store.activeLocations().find(l => l.name === "Netherite Stash");
@@ -167,8 +168,8 @@ check([...d2.keys()].some(k => k.includes("backup-before-replace")), "a backup w
 
 const d3 = new Map();
 installDOM({ store: d3 });
-reload(store, SEED);
-const rM = store.commitJsonImport(JSON.parse(exported).worlds[0].locations, "merge");
+await reload(store, SEED);
+const rM = await store.commitJsonImport(JSON.parse(exported).worlds[0].locations, "merge");
 eq(rM.skipped, 15, "merge skipped the 15 ids already present");
 eq(rM.added, 1, "merge added only the genuinely new one");
 eq(store.activeLocations().length, 16, "merge did not duplicate anything");

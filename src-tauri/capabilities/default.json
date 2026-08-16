@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimum permissions BlockBook needs. Deliberately narrow: no filesystem access until Phase 10, no shell, no network.",
+  "description": "Minimum permissions BlockBook needs. Deliberately narrow: no `fs:` scope (file access goes through named Rust commands instead), no shell, no network.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -12,6 +12,8 @@
     "core:window:allow-is-visible",
     "core:event:allow-listen",
     "clipboard-manager:allow-write-text",
-    "global-shortcut:default"
+    "global-shortcut:default",
+    "dialog:allow-save",
+    "dialog:allow-open"
   ]
 }

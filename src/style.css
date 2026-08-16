@@ -241,6 +241,19 @@
   .recent:hover { background: var(--bg-2); color: var(--fg-0); }
   .recent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+  .storage-path {
+    margin: 0 0 var(--s-2);
+    padding: var(--s-2);
+    background: var(--bg-2);
+    border: var(--border);
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    word-break: break-all;
+    user-select: all;            /* click once, copy the whole path */
+  }
+  .storage-path code { color: var(--fg-0); }
+
   kbd {
     font-family: var(--font-mono);
     font-size: var(--fs-xs);

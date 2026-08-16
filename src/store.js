@@ -4,7 +4,7 @@
    Knows nothing about the DOM. docs/02-TRD.md §5
    ========================================================================== */
 
-import { esc } from "./util.js";
+import { esc, parseJson } from "./util.js";
 import { DEFAULT_SETTINGS, DIMENSIONS, SCHEMA_VERSION, UNSAFE_HOTKEYS, buildInitialData, normaliseLocation, repairPortalLinks } from "./schema.js";
 import { mergeLocations } from "./locations.js";
 
@@ -13,6 +13,9 @@ let state = {
   notice: null,        // {kind:"error"|"info", text} — rendered as a banner
   fatal: false,        // true = refuse to touch storage (e.g. newer schema)
   toast: null,
+  // Cached backend.info(). Rendering is synchronous, so the async lookup is
+  // done at boot and refreshed when Settings opens.
+  storageInfo: null,
   ui: {
     activeTab:      "coordinates",   // coordinates | portals | brewing | reference
     search:         "",
@@ -62,13 +65,55 @@ let saveTimer = null;
 let saveStatus = "saved";   // saved | saving | error
 
 /**
+ * The localStorage backend — the browser default, and the v0.x behaviour.
+ * Phase 10 adds a file backend with the same shape; store.js never learns which
+ * one it is talking to. docs/02-TRD.md §5
+ */
+const localStorageBackend = {
+  kind: "localStorage",
+  async info() {
+    return { path: STORAGE_KEY, dir: "browser localStorage", portable: false,
+             exists: localStorage.getItem(STORAGE_KEY) != null, backup_count: 0 };
+  },
+  async read() { return localStorage.getItem(STORAGE_KEY); },
+  async write(contents) { localStorage.setItem(STORAGE_KEY, contents); },
+  async quarantine() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = `${STORAGE_KEY}.corrupt-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    if (raw != null) localStorage.setItem(key, raw);
+    return key;
+  },
+  async backups() { return []; },
+  async readBackup() { throw new Error("No backups in localStorage"); },
+  async openFolder() { throw new Error("No folder to open"); },
+};
+
+let backend = localStorageBackend;
+
+/** Swap the persistence layer. main.js installs the file backend on desktop. */
+function setStorageBackend(next) {
+  backend = next ?? localStorageBackend;
+}
+
+function storageBackend() { return backend; }
+
+/** Refresh the cached storage info (path, portable flag, backup count). */
+async function refreshStorageInfo() {
+  try {
+    state.storageInfo = { ...(await backend.info()), kind: backend.kind };
+  } catch {
+    state.storageInfo = { path: STORAGE_KEY, dir: "", portable: false, kind: backend.kind, backup_count: 0 };
+  }
+  return state.storageInfo;
+}
+
+/**
  * Quarantine unreadable data instead of overwriting it. The user's coordinates
  * are not reconstructible, so a bad parse must never cost them the file.
  */
-function quarantine(raw, why) {
-  const key = `${STORAGE_KEY}.corrupt-${new Date().toISOString().replace(/[:.]/g, "-")}`;
-  try { localStorage.setItem(key, raw); } catch { /* storage full — nothing safe to do */ }
-  return key;
+async function quarantine() {
+  try { return await backend.quarantine(); }
+  catch { return "(could not quarantine)"; }
 }
 
 /**
@@ -76,11 +121,43 @@ function quarantine(raw, why) {
  *   data/seed.json by main.js. Passed in rather than inlined so the module has
  *   no build-time data dependency and tests can supply their own fixture.
  */
-function loadData(seedLocations) {
+/**
+ * Try the newest valid backup before giving up and seeding.
+ *
+ * Walks them newest-first: a backup can itself be truncated if the crash landed
+ * mid-copy, so "newest" is not automatically "usable".
+ * @returns {Promise<{data: Object, how: string}>}
+ */
+async function recoverFromBackup(seedLocations) {
+  let list = [];
+  try { list = await backend.backups(); } catch { /* no backups available */ }
+
+  for (const b of list) {
+    try {
+      const text = await backend.readBackup(b.name);
+      const doc = parseJson(text);
+      if (doc?.app !== "blockbook") continue;
+      if (Number(doc.schemaVersion ?? 1) > SCHEMA_VERSION) continue;
+      const locs = (doc.worlds?.[0]?.locations ?? [])
+        .map((l, i) => normaliseLocation(l, i, l.createdAt ?? new Date().toISOString()));
+      repairPortalLinks(locs);
+      doc.worlds[0].locations = locs;
+      doc.settings = { ...DEFAULT_SETTINGS, ...(doc.settings ?? {}) };
+      return { data: doc, how: `Recovered ${locs.length} locations from backup <code>${esc(b.name)}</code>.` };
+    } catch { /* try the next one */ }
+  }
+
+  return {
+    data: buildInitialData(seedLocations).data,
+    how: "No usable backup was found, so the starter data was loaded instead.",
+  };
+}
+
+async function loadData(seedLocations) {
   let raw = null;
-  try { raw = localStorage.getItem(STORAGE_KEY); }
-  catch { return { data: buildInitialData(seedLocations).data,
-                   notice: { kind: "error", text: "localStorage is unavailable — changes will not persist this session." } }; }
+  try { raw = await backend.read(); }
+  catch (err) { return { data: buildInitialData(seedLocations).data,
+                   notice: { kind: "error", text: `Storage is unavailable (${esc(String(err?.message ?? err))}) — changes will not persist this session.` } }; }
 
   if (!raw) {
     // Not an error: first run. Seed it.
@@ -89,20 +166,24 @@ function loadData(seedLocations) {
 
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = parseJson(raw);
   } catch {
-    const key = quarantine(raw);
+    // Move it aside, then try the newest backup before falling back to seed —
+    // a corrupt file should cost you the last write, not the whole world.
+    const key = await quarantine();
+    const rescued = await recoverFromBackup(seedLocations);
     return {
-      data: buildInitialData(seedLocations).data,
-      notice: { kind: "error", text: `Saved data was unreadable. It has been kept at <code>${esc(key)}</code> and the seed data loaded instead. Nothing was overwritten.` },
+      data: rescued.data,
+      notice: { kind: "error", text: `Saved data was unreadable. It has been kept at <code>${esc(key)}</code>. ${rescued.how}` },
     };
   }
 
   if (parsed?.app !== "blockbook") {
-    const key = quarantine(raw);
+    const key = await quarantine();
+    const rescued = await recoverFromBackup(seedLocations);
     return {
-      data: buildInitialData(seedLocations).data,
-      notice: { kind: "error", text: `Saved data is not a BlockBook file. It has been kept at <code>${esc(key)}</code>.` },
+      data: rescued.data,
+      notice: { kind: "error", text: `Saved data is not a BlockBook file. It has been kept at <code>${esc(key)}</code>. ${rescued.how}` },
     };
   }
 
@@ -152,15 +233,20 @@ function loadData(seedLocations) {
 let onSaveStatusChange = () => {};
 function setSaveStatusListener(fn) { onSaveStatusChange = fn ?? (() => {}); }
 
-function writeNow() {
+async function writeNow() {
   if (state.fatal || !state.data) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+    // The backend owns the write protocol: back up, temp file, fsync, atomic
+    // rename, prune. docs/02-TRD.md §5.3
+    await backend.write(JSON.stringify(state.data, null, 2));
     saveStatus = "saved";
+    if (state.notice?.kind === "error" && /Could not save/.test(state.notice.text)) {
+      state.notice = null;                 // a later write succeeded; clear the alarm
+    }
   } catch (err) {
     // Keep the in-memory state and surface it. Never silently discard a change.
     saveStatus = "error";
-    state.notice = { kind: "error", text: `Could not save: ${esc(err.message)}. Your changes are still here, but they are not written to disk.` };
+    state.notice = { kind: "error", text: `Could not save: ${esc(String(err?.message ?? err))}. Your changes are still here, but they are not written to disk.` };
   }
   onSaveStatusChange();
 }
@@ -173,9 +259,13 @@ function save() {
   saveTimer = setTimeout(writeNow, SAVE_DEBOUNCE_MS);
 }
 
-/** Flush any pending write. Called before the page goes away. */
+/**
+ * Flush any pending write. Called before the page goes away, and — importantly
+ * on desktop — before hiding to tray, since a hidden window may sit for hours.
+ */
 function flush() {
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; writeNow(); }
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; return writeNow(); }
+  return Promise.resolve();
 }
 
 window.addEventListener("beforeunload", flush);
@@ -262,8 +352,19 @@ function deleteLocation(id) {
  * docs/10-DECISIONS-AND-RISKS.md ADR-007/ADR-008 — a backup is written before
  * every import, without exception.
  */
-function backupNow(reason) {
+/**
+ * Snapshot before anything bulk touches the data (ADR-007/ADR-008).
+ *
+ * On the file backend a normal write already creates a timestamped backup, so
+ * this just forces one immediately rather than waiting for the debounce — the
+ * point is that a backup exists *before* the import, not after.
+ */
+async function backupNow(reason) {
   if (state.fatal || !state.data) return null;
+  if (backend.kind === "file") {
+    await writeNow();                       // writes, and backs up the prior file
+    return `${reason} (backup written)`;
+  }
   const key = `${STORAGE_KEY}.backup-${reason}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   try { localStorage.setItem(key, JSON.stringify(state.data)); return key; }
   catch { return null; }
@@ -278,8 +379,10 @@ function exportPayload() {
  * only ever reaches here after an explicit second confirmation.
  * @returns {{added:number, skipped:number, mode:string}}
  */
-function commitJsonImport(locations, mode) {
-  backupNow(mode === "replace" ? "before-replace" : "before-merge");
+async function commitJsonImport(locations, mode) {
+  // Awaited, not fired-and-forgotten: the whole point is that the backup exists
+  // BEFORE the data is replaced. ADR-007.
+  await backupNow(mode === "replace" ? "before-replace" : "before-merge");
 
   const now = new Date().toISOString();
   const incoming = locations.map((l, i) => normaliseLocation(l, i, l.createdAt ?? now));
@@ -297,13 +400,13 @@ function commitJsonImport(locations, mode) {
   }
 
   repairPortalLinks(world.locations);
-  flush();                     // bulk changes are written immediately, not debounced
+  await flush();               // bulk changes are written immediately, not debounced
   return { added, skipped, mode };
 }
 
 /** Commit the reviewed Notepad rows. Always appends. */
-function commitTextImport(rows) {
-  backupNow("before-text-import");
+async function commitTextImport(rows) {
+  await backupNow("before-text-import");
 
   const now = new Date().toISOString();
   const locs = activeLocations();
@@ -325,7 +428,7 @@ function commitTextImport(rows) {
   }
 
   repairPortalLinks(locs);
-  flush();
+  await flush();
   return accepted.length;
 }
 
@@ -359,6 +462,11 @@ function refSlice(id) {
 }
 
 export {
+  setStorageBackend,
+  storageBackend,
+  refreshStorageInfo,
+  localStorageBackend,
+  recoverFromBackup,
   setSaveStatusListener,
   state,
   activeLocations,

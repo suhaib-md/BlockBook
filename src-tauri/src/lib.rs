@@ -14,6 +14,11 @@ stays attributable to one change. docs/06-IMPLEMENTATION-PLAN.md
 use tauri::{Emitter, Manager, WindowEvent};
 
 #[cfg(desktop)]
+mod dialogs;
+#[cfg(desktop)]
+mod storage;
+
+#[cfg(desktop)]
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
@@ -128,7 +133,19 @@ pub fn run() {
         use tauri_plugin_global_shortcut::ShortcutState;
 
         builder = builder
-            .invoke_handler(tauri::generate_handler![apply_hotkey])
+            .invoke_handler(tauri::generate_handler![
+                apply_hotkey,
+                storage::storage_info,
+                storage::storage_read,
+                storage::storage_write,
+                storage::storage_quarantine,
+                storage::storage_backups,
+                storage::storage_read_backup,
+                storage::storage_open_folder,
+                dialogs::export_dialog,
+                dialogs::import_dialog,
+            ])
+            .plugin(tauri_plugin_dialog::init())
             // Restores the window position and size from the previous launch.
             .plugin(tauri_plugin_window_state::Builder::default().build())
             .plugin(

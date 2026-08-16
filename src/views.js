@@ -490,6 +490,7 @@ function portalsPanelHTML() {
 function settingsModalHTML() {
   const s = state.data.settings;
   const locs = activeLocations();
+  const info = state.storageInfo;
   return `
     <div class="overlay">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="set-title">
@@ -544,14 +545,22 @@ function settingsModalHTML() {
 
           <div class="section-label" style="margin-top:var(--s-4)">Data</div>
           <p class="hint" style="margin-top:0">
-            ${locs.length} locations. Stored in this browser under
-            <code>${esc(STORAGE_KEY)}</code>. Phase 10 moves this to a portable
-            <code>data.json</code> next to the app.
+            ${locs.length} locations, stored at:
+          </p>
+          <p class="storage-path"><code>${esc(info?.path ?? STORAGE_KEY)}</code></p>
+          <p class="hint" style="margin-top:0">
+            ${info?.portable
+              ? `<strong>Portable</strong> — copy this whole folder to another PC and everything comes with it.`
+              : info?.kind === "file"
+                ? `Stored in the app data folder because the program folder is not writable.`
+                : `Stored in this browser. The desktop app keeps a portable <code>data.json</code> instead.`}
+            ${info?.backup_count ? `${info.backup_count} backup${info.backup_count === 1 ? "" : "s"} kept (newest 20).` : ""}
           </p>
           <div class="verdict-actions" style="flex-wrap:wrap">
-            <button class="btn" data-act="export">Export JSON</button>
+            <button class="btn" data-act="export">Export JSON…</button>
             <button class="btn" data-act="import-file">Import JSON…</button>
             <button class="btn" data-act="import-text">Import from Notepad…</button>
+            ${info?.kind === "file" ? `<button class="btn" data-act="open-folder">Open folder</button>` : ""}
           </div>
 
           <div class="section-label" style="margin-top:var(--s-4)">Keyboard</div>

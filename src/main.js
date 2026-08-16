@@ -3,11 +3,15 @@
    Bootstrap, the single render path, and all event wiring.
    ========================================================================== */
 
-import { esc } from "./util.js";
+import { esc, parseJson } from "./util.js";
 import { blankDraft, buildImportRows, draftFrom, draftToLocation, exportFilename, pushRecent, tpCommand, validateImportPayload, validateLocation } from "./locations.js";
-import { activeLocations, commitJsonImport, commitLocation, commitTextImport, deleteLocation, exportPayload, loadData, refSlice, save, setSaveStatusListener, state, toggleFavorite } from "./store.js";
+import { activeLocations, commitJsonImport, commitLocation, commitTextImport, deleteLocation,
+         exportPayload, flush, loadData, localStorageBackend, refreshStorageInfo, refSlice, save,
+         setSaveStatusListener, setStorageBackend, state, storageBackend, toggleFavorite,
+         writeNow } from "./store.js";
 import { $, TABS, renderBanner, renderModal, renderPanel, renderStatusBar, renderTabs, renderToast, renderToolbar } from "./views.js";
-import { applyHotkey, copyText, hideWindow, isDesktop, onWindowShown, setAlwaysOnTop } from "./desktop.js";
+import { applyHotkey, copyText, desktopStorage, exportDialog, hideWindow, importDialog,
+         isDesktop, onWindowShown, setAlwaysOnTop } from "./desktop.js";
 
 let toastTimer = null;
 
@@ -126,9 +130,24 @@ function closeModal() {
 
 /* ---- export / import plumbing ---- */
 
-function doExport() {
+async function doExport() {
   const text = exportPayload();
   const name = exportFilename();
+  const count = activeLocations().length;
+
+  // On desktop use a real save-as dialog; the browser gets a download.
+  if (isDesktop()) {
+    try {
+      const path = await exportDialog(name, text);
+      if (path) toast(`Exported ${count} locations to ${path}`);
+      return;                                   // null = user cancelled
+    } catch (err) {
+      state.notice = { kind: "error", text: `Export failed: ${esc(String(err?.message ?? err))}` };
+      render();
+      return;
+    }
+  }
+
   const blob = new Blob([text], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -138,7 +157,29 @@ function doExport() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast(`Exported ${activeLocations().length} locations to ${name}`);
+  toast(`Exported ${count} locations to ${name}`);
+}
+
+/** Parse an imported payload and hand it to the merge/replace choice. */
+function stageImport(text) {
+  let parsed;
+  try {
+    parsed = parseJson(text);
+  } catch (err) {
+    state.notice = { kind: "error", text: `That file is not valid JSON: ${esc(err.message)}` };
+    render();
+    return;
+  }
+  const v = validateImportPayload(parsed);
+  if (!v.ok) {
+    state.notice = { kind: "error", text: esc(v.error) };
+    render();
+    return;
+  }
+  state.notice = null;
+  state.ui.pendingImport = { locations: v.locations };
+  state.ui.modal = "import-choice";
+  render();
 }
 
 /** Nothing here touches state until validateImportPayload says the file is sound. */
@@ -148,27 +189,19 @@ function handleImportFile(file) {
     state.notice = { kind: "error", text: "Could not read that file." };
     render();
   };
-  reader.onload = () => {
-    let parsed;
-    try {
-      parsed = JSON.parse(String(reader.result));
-    } catch (err) {
-      state.notice = { kind: "error", text: `That file is not valid JSON: ${esc(err.message)}` };
-      render();
-      return;
-    }
-    const v = validateImportPayload(parsed);
-    if (!v.ok) {
-      state.notice = { kind: "error", text: esc(v.error) };
-      render();
-      return;
-    }
-    state.notice = null;
-    state.ui.pendingImport = { locations: v.locations };
-    state.ui.modal = "import-choice";
-    render();
-  };
+  reader.onload = () => stageImport(String(reader.result));
   reader.readAsText(file);
+}
+
+/** Desktop import goes through the native picker instead of a hidden <input>. */
+async function pickImportFile() {
+  try {
+    const text = await importDialog();
+    if (text != null) stageImport(text);       // null = cancelled
+  } catch (err) {
+    state.notice = { kind: "error", text: `Import failed: ${esc(String(err?.message ?? err))}` };
+    render();
+  }
 }
 
 /** Read the whole form back into the draft so re-render is lossless. */
@@ -216,7 +249,11 @@ document.addEventListener("click", (e) => {
     case "fav":            toggleFavorite(id); render(); return;
     case "clear-search":   state.ui.search = ""; render(); $("search")?.focus(); return;
     case "clear-filters":  state.ui.filters = { dimension: null, type: null }; render(); return;
-    case "settings":       state.ui.modal = "settings"; render(); return;
+    case "settings":
+      state.ui.modal = "settings";
+      render();
+      refreshStorageInfo().then(render);   // path + backup count may have moved on
+      return;
     case "select-potion":
       // Jump from a reverse-lookup hit to the expanded row in the table.
       refSlice("brewing").selectedId = id;
@@ -242,7 +279,12 @@ document.addEventListener("click", (e) => {
       return;
     }
     case "export":         doExport(); return;
-    case "import-file":    $("file-input")?.click(); return;
+    case "import-file":
+      if (isDesktop()) pickImportFile(); else $("file-input")?.click();
+      return;
+    case "open-folder":
+      storageBackend().openFolder?.().catch(() => toast("Could not open the folder."));
+      return;
     case "import-text":    state.ui.modal = "import-text"; render(); $("import-text")?.focus(); return;
     case "parse-text": {
       const text = $("import-text")?.value ?? "";
@@ -252,22 +294,28 @@ document.addEventListener("click", (e) => {
       return;
     }
     case "commit-text-import": {
-      const n = commitTextImport(state.ui.import.rows);
-      closeModal();
-      toast(`Imported ${n} location${n === 1 ? "" : "s"}.`);
+      const rows = state.ui.import.rows;
+      commitTextImport(rows).then(n => {
+        closeModal();
+        toast(`Imported ${n} location${n === 1 ? "" : "s"}.`);
+      });
       return;
     }
     case "import-merge": {
-      const r = commitJsonImport(state.ui.pendingImport.locations, "merge");
-      closeModal();
-      toast(`Merged ${r.added} location${r.added === 1 ? "" : "s"}${r.skipped ? `, skipped ${r.skipped} already here` : ""}.`);
+      const pending = state.ui.pendingImport.locations;
+      commitJsonImport(pending, "merge").then(r => {
+        closeModal();
+        toast(`Merged ${r.added} location${r.added === 1 ? "" : "s"}${r.skipped ? `, skipped ${r.skipped} already here` : ""}.`);
+      });
       return;
     }
     case "import-replace":  state.ui.modal = "confirm-replace"; render(); return;
     case "import-replace-confirmed": {
-      const r = commitJsonImport(state.ui.pendingImport.locations, "replace");
-      closeModal();
-      toast(`Replaced everything with ${r.added} location${r.added === 1 ? "" : "s"}.`);
+      const pending = state.ui.pendingImport.locations;
+      commitJsonImport(pending, "replace").then(r => {
+        closeModal();
+        toast(`Replaced everything with ${r.added} location${r.added === 1 ? "" : "s"}.`);
+      });
       return;
     }
     case "link-nearest":
@@ -482,7 +530,9 @@ document.addEventListener("keydown", (e) => {
       render();
       $("search")?.focus();
     } else if (isDesktop()) {
-      hideWindow();                       // third stage: back to the tray
+      // Flush first — a hidden window can sit for hours, and an unwritten
+      // change should not wait that long.
+      flush().then(hideWindow);
     } else {
       document.activeElement?.blur?.();   // a browser tab cannot hide itself
     }
@@ -567,17 +617,66 @@ async function loadSeedLocations() {
   }
 }
 
+/**
+ * One-time move from localStorage to data.json.
+ *
+ * Runs only when the file does not exist yet and localStorage does have data —
+ * i.e. the first launch after upgrading from v0.x. The localStorage copy is
+ * deliberately LEFT IN PLACE: if anything about the new path is wrong, the old
+ * data is still sitting there untouched. docs/06 Phase 10.
+ */
+async function migrateLocalStorageToFile(fileBackend) {
+  try {
+    const info = await fileBackend.info();
+    if (info.exists) return null;
+
+    const legacy = await localStorageBackend.read();
+    if (!legacy) return null;
+
+    await fileBackend.write(legacy);
+    return info.path;
+  } catch {
+    return null;   // migration is best-effort; a failure just means a fresh file
+  }
+}
+
 (async function boot() {
   // store.js must not import views.js (that would cycle), so the save-status
   // indicator is wired up here instead.
   setSaveStatusListener(renderStatusBar);
 
+  let migratedTo = null;
+  const fileBackend = desktopStorage();
+  if (fileBackend) {
+    migratedTo = await migrateLocalStorageToFile(fileBackend);
+    setStorageBackend(fileBackend);
+  }
+
   const seed   = await loadSeedLocations();
-  const loaded = loadData(seed);
+  const loaded = await loadData(seed);
+
+  // Refreshed AFTER the load, not before: a corrupt file gets quarantined
+  // during loadData, so a pre-load snapshot would still claim the file exists
+  // and the materialise step below would skip — leaving a recovered dataset in
+  // memory only, with no data.json on disk at all.
+  await refreshStorageInfo();
 
   state.data   = loaded.data;
   state.notice = loaded.notice ?? state.notice;
   state.fatal  = Boolean(loaded.fatal);
+
+  if (migratedTo && !state.notice) {
+    state.notice = { kind: "info", text: `Your data now lives in <code>${esc(migratedTo)}</code>. The old browser copy was left untouched as a safety net.` };
+  }
+
+  // Materialise the file on a first run. Saves only happen on mutation, so
+  // without this `data.json` would not exist until the user edited something —
+  // and "copy the folder to another PC" would carry nothing. Skipped when the
+  // load was fatal, because then we must not touch storage at all.
+  if (!state.fatal && state.data && state.storageInfo && !state.storageInfo.exists) {
+    await writeNow();
+    await refreshStorageInfo();
+  }
 
   render();
   $("search")?.focus();   // docs/03-APP-FLOW.md §2.1 — hard requirement

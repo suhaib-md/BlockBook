@@ -7,7 +7,7 @@ const rt    = await import("../src/reftable.js");
 const brew  = await import("../src/brewing.js");
 const store = await import("../src/store.js");
 const views = await import("../src/views.js");
-reload(store, seedLocations());
+await reload(store, seedLocations());
 
 const B = brew.BREWING;
 

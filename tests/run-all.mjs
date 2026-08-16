@@ -28,6 +28,7 @@ const GATES = [
   ["7", "Keyboard, favourites, recently viewed"],
   ["8", "Module split + Tauri scaffold"],
   ["9", "Overlay: hotkey, tray, always-on-top"],
+  ["10", "File storage, atomic writes, backups"],
 ];
 
 let total = 0, failed = 0, brokenGates = 0;

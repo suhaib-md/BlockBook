@@ -13,9 +13,10 @@ coordinate book, nether portal math, and offline brewing/reference tables.
 
 | | |
 |---|---|
-| Current version | **`v0.3`** — Phases 0–9. Native exe, configurable summon hotkey, tray, always-on-top. |
-| Next milestone | `v1.0` — Phase 10: portable `data.json`, atomic writes, rolling backups |
-| Tests | `npm test` — 677 checks, zero dependencies |
+| Current version | **`v1.0` candidate** — Phases 0–10. Native exe, portable `data.json`, atomic writes, rolling backups. |
+| Before calling it v1.0 | Walk the [six success criteria](docs/01-PRD.md) and the S1–S10 data-safety tests on the real exe |
+| Next milestone | `v1.1` — Phase 11: Xaero's waypoint sync, distance tools |
+| Tests | `npm test` — 765 checks, zero dependencies |
 | Reminder | Brewing durations verified for **1.21**. Set `verified: false` in `data/brewing.json` **and** the inline copy after any game update. |
 | Product name | BlockBook (internal app id: `blockbook`, data file `data.json`) |
 
@@ -79,7 +80,7 @@ Module dependencies run one way only, and a gate check enforces it — see
 ```powershell
 npm install
 npm run dev          # Vite dev server on http://localhost:1420
-npm test             # all phase gates, 677 checks
+npm test             # all phase gates, 765 checks
 
 npm run tauri dev    # native window (needs Rust + MSVC Build Tools)
 npm run tauri build  # .exe + installer
@@ -91,6 +92,22 @@ npm run tauri build  # .exe + installer
 2. **Rust** — `rustup` from https://rustup.rs
 3. **MSVC C++ Build Tools** — "Desktop development with C++" workload (~6 GB)
 4. **WebView2** — already present on Windows 11
+
+---
+
+## Where your data lives
+
+The desktop app writes a single **`data.json`** next to the exe. Copy that folder to a
+USB stick and everything comes with it — locations, settings, and the `backups/`
+folder. Settings shows the exact resolved path with an **Open folder** button.
+
+If the exe sits somewhere unwritable (Program Files, say), it falls back to
+`%APPDATA%\BlockBook\` automatically and Settings tells you so.
+
+**Every write** backs up the previous file first, writes to a temp file, fsyncs,
+then atomically renames over the real one — so a crash mid-write leaves the old file
+intact. The newest 20 backups are kept. If `data.json` is ever unreadable it is moved
+aside rather than overwritten, and the newest *parseable* backup is loaded in its place.
 
 ---
 

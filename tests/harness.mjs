@@ -149,11 +149,11 @@ export const settle = () => new Promise(r => setTimeout(r, 5));
  * Simulate closing and reopening the app: in-memory state is discarded, but
  * localStorage survives. Exactly what boot() does.
  */
-export function reload(store, seed) {
+export async function reload(store, seed) {
   store.state.data = null;
   store.state.notice = null;
   store.state.fatal = false;
-  const loaded = store.loadData(seed);
+  const loaded = await store.loadData(seed);
   store.state.data = loaded.data;
   store.state.notice = loaded.notice;
   store.state.fatal = Boolean(loaded.fatal);

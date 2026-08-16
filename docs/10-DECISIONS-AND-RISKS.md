@@ -237,6 +237,41 @@ Enforced by a gate: if a new tab needs renderer changes, fix the renderer, not t
 
 ---
 
+## ADR-016 — File I/O lives in Rust, not behind `plugin-fs`
+
+**Status:** Accepted · **Phase:** 10 · **Refines** ADR-008
+
+**Context.** The plan called for `@tauri-apps/plugin-fs` to read and write
+`data.json`. Doing that means granting the webview an `fs:` capability scope — a
+general "you may touch files matching this pattern" permission — to accomplish
+something entirely specific: read one known file, write one known file, list one
+known folder.
+
+**Decision.** No `fs:` scope. Seven named Rust commands instead
+(`storage_read`, `storage_write`, `storage_quarantine`, `storage_backups`,
+`storage_read_backup`, `storage_info`, `storage_open_folder`), plus two for the
+native dialogs. The capability file grants no filesystem permission at all, and a
+gate check asserts it stays that way.
+
+**Consequences.**
+
+- The webview cannot address an arbitrary path even if its JS were compromised or
+  a dependency turned hostile. Each command hard-codes what it will touch, and
+  `storage_read_backup` rejects any name containing `/`, `\` or `..`.
+- **The write protocol becomes real.** `fs::rename` is an atomic replace at the
+  filesystem level and `sync_all` genuinely flushes to disk — neither guarantee is
+  available from the JS side. A crash between the temp write and the rename leaves
+  the previous `data.json` untouched, which is the entire point of ADR-008.
+- Cost: ~200 lines of Rust and an async boundary through the whole persistence
+  layer. Worth it for the highest-severity risk in the register.
+
+**Also decided here:** portable mode **probes** the exe folder by creating a test
+file rather than assuming it is writable. Installed under Program Files a standard
+user cannot write beside the exe, and silently failing every save there would be the
+worst possible outcome for R-01.
+
+---
+
 ## ADR-015 — The summon hotkey must not be a game control
 
 **Status:** Accepted · **Phase:** 9 · **Supersedes** the `Ctrl+Space` default named

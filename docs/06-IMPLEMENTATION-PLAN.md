@@ -24,7 +24,7 @@ Time estimates assume learning as you go. They are honest, not optimistic.
 | — | **🛑 USE IT FOR A WEEK** | 7 days | — | ☐ |
 | 8 | Tauri wrap | 3 h | — | ☑ exe built &amp; launches · your visual pass pending |
 | 9 | Overlay behaviour | 2 h | — | ☑ built &amp; close-to-tray verified · hotkey needs your test |
-| 10 | File storage + backups | 2 h | **v1.0** | ☐ |
+| 10 | File storage + backups | 2 h | **v1.0** | ☑ code + gates · S1–S10 on the real exe pending |
 | 11 | Xaero's integration | 3 h | **v1.1** | ☐ |
 | 12 | More reference tabs | 2 h each | **v1.2** | ☐ |
 | 13 | Ship properly | 2 h | — | ☐ |
@@ -394,15 +394,51 @@ message.
 
 **Goal:** true portability and zero data loss.
 
-- [ ] `plugin-fs` read/write of `data.json`
-- [ ] Portable-mode path resolution per [02-TRD §5.2](02-TRD.md)
-- [ ] Show the resolved path in Settings, with "Open folder"
-- [ ] One-time migration: localStorage has data and `data.json` does not → write it out, keep both for one release
-- [ ] **Atomic write**: serialise → backup → write `.tmp` → flush → rename
-- [ ] Rolling backups in `backups/`, prune to the newest 20
-- [ ] `plugin-dialog` for import/export pickers
-- [ ] Corrupt-file recovery: quarantine, load newest backup, persistent banner
-- [ ] Flush pending writes on hide-to-tray and on quit
+- [x] Read/write of `data.json` — **not** `plugin-fs`. Granting the webview `fs:`
+      scope to write one known file is a wide permission for a narrow need; the
+      work is done by named Rust commands instead and the capability file has no
+      `fs:` entry at all. A gate check asserts that.
+- [x] Portable-mode path resolution per [02-TRD §5.2](02-TRD.md) — and the exe
+      folder is **probe-tested for writability**, not assumed. Under Program Files
+      a standard user cannot write there, so "next to the exe" must be verified.
+- [x] Show the resolved path in Settings, with "Open folder"
+- [x] One-time migration: localStorage → `data.json`, and the localStorage copy is
+      **deliberately left in place** as a safety net
+- [x] **Atomic write**: back up current → write `.tmp` → flush → `fsync` → rename
+- [x] Rolling backups in `backups/`, prune the **oldest** beyond 20
+- [x] `plugin-dialog` for import/export pickers
+- [x] Corrupt-file recovery: quarantine, then walk backups **newest-first until one
+      parses** — a backup can itself be truncated if the crash landed mid-copy
+- [x] Flush pending writes on hide-to-tray and on quit
+
+**Refactor this phase forced:** persistence became async, so `loadData`, `writeNow`,
+`flush`, `backupNow`, `commitJsonImport` and `commitTextImport` are all `async` now.
+The parse/validate logic stayed synchronous, which is why every Phase 3 corrupt-data
+test survived unchanged.
+
+**Bug caught by the gate:** `commitJsonImport` was calling `backupNow()` without
+awaiting it. The backup would have landed *after* the data it was meant to protect.
+
+**Three bugs caught only by running the real exe** — none of them reachable from the
+gates as they stood, which is the argument for end-to-end testing in one paragraph:
+
+1. **First run created no file at all.** Saves happen on mutation, so a fresh install
+   left `data.json` non-existent until the user edited something. Settings showed a
+   path to nothing, and "copy the folder to another PC" would have carried no data.
+   Boot now materialises the file once.
+2. **Recovery was never persisted.** After rescuing from a backup, no `data.json`
+   existed. `storageInfo` was snapshotted *before* `loadData`, so it still reported
+   `exists: true` even though quarantine had just moved the file away, and the
+   materialise step skipped. The refresh now happens after the load.
+3. **A UTF-8 BOM made a valid file look corrupt.** `JSON.parse` throws on a BOM, and
+   **Windows Notepad writes one by default**. Principle P2 promises `data.json` is
+   hand-editable with any text editor — as written, editing it in Notepad and saving
+   would have got the file quarantined. `parseJson()` now tolerates a BOM on the data
+   file, on backups, and on imports.
+
+**Verified end-to-end on the built exe:** first run creates the file; a corrupted
+`data.json` is quarantined byte-identically, recovered from a BOM-encoded backup, and
+the recovery is written back to disk; no `.tmp` is left behind.
 
 **Docs:** [02-TRD §§5.2–5.4, §8](02-TRD.md)
 

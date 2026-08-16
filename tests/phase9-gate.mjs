@@ -29,7 +29,7 @@ check(!/\.register\([^)]*\)\.unwrap\(\)/.test(rust), "no unwrap() on registratio
 check(/fn apply_hotkey/.test(rust), "hotkey is settable at runtime, not baked in");
 check(/unregister_all/.test(rust), "  ...and the previous binding is cleared first");
 check(/map_err/.test(rust), "  ...registration errors are returned, not panicked");
-check(/generate_handler!\[apply_hotkey\]/.test(rust), "  ...and the command is exposed to the webview");
+check(/generate_handler!\[[\s\S]*?apply_hotkey/.test(rust), "  ...and the command is exposed to the webview");
 // The frontend owns the setting, so Rust must NOT register anything at startup.
 const setupBlock = rust.slice(rust.indexOf(".setup("), rust.indexOf(".on_window_event("));
 check(!/register\("/.test(setupBlock), "nothing is registered at startup — no hard-coded default can fire");
@@ -71,7 +71,7 @@ const disk = new Map([["blockbook.data", JSON.stringify({
               hotkey: "Ctrl+Space", theme: "dark" },
 })]]);
 installDOM({ store: disk });
-const loaded = reload(store2, SEED);
+const loaded = await reload(store2, SEED);
 eq(store2.state.data.settings.hotkey, "CmdOrCtrl+Shift+B", "a saved Ctrl+Space is migrated away on load");
 check(loaded.notice !== null, "  ...and the user is told it changed");
 check(/sprint-jump/.test(loaded.notice.text), "  ...with the reason");
@@ -151,7 +151,7 @@ check(/id === "s-hotkey"/.test(main), "changing the hotkey in Settings re-regist
 check(/state\.notice = \{ kind: "error", text: esc\(res\.reason\)/.test(main),
       "a failed registration surfaces visibly instead of failing silently");
 check(/box\.select\?\.\(\)/.test(main), "  ...selecting the existing query, so the next keystroke replaces it");
-check(/isDesktop\(\)[\s\S]{0,80}hideWindow\(\)/.test(main), "Esc's third stage hides the window on desktop");
+check(/isDesktop\(\)[\s\S]{0,160}hideWindow/.test(main), "Esc's third stage hides the window on desktop");
 
 const views = readSrc("views.js");
 check(/id="s-hotkey"/.test(views), "Settings has a hotkey picker");

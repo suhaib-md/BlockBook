@@ -9,7 +9,7 @@ const views = await import("../src/views.js");
 const util  = await import("../src/util.js");
 
 const SEED = seedLocations();
-reload(store, SEED);
+await reload(store, SEED);
 const L = () => store.activeLocations();
 
 const base = { id: null, name: "Test", dimension: "overworld", x: 10, y: 64, z: 20,
@@ -126,14 +126,14 @@ eq(store.deleteLocation("does-not-exist"), null, "deleting a missing id is a no-
 console.log("\n=== persistence round trip (the Phase 3 gate) ===");
 const disk = new Map();
 dom = installDOM({ store: disk });
-reload(store, SEED);
+await reload(store, SEED);
 eq(L().length, 15, "first run seeds 15 locations");
 store.commitLocation({ ...base, id: null, name: "Persisted Point", dimension: "end", x: 5, y: 70, z: -9 });
-store.flush();
+await store.flush();
 check(disk.has("blockbook.data"), "data written to localStorage");
 
 // "close the browser and reopen": memory discarded, storage survives
-reload(store, SEED);
+await reload(store, SEED);
 eq(L().length, 16, "reopened with 16 locations");
 const persisted = L().find(l => l.name === "Persisted Point");
 check(Boolean(persisted), "the added location survived a full reload");
@@ -145,7 +145,7 @@ eq(L().find(l => l.id === "loc_015")?.linkedPortalId, "loc_014", "  ...both side
 console.log("\n=== corrupt / hostile storage (docs 02 §8) ===");
 const bad = new Map([["blockbook.data", "{ this is not json"]]);
 installDOM({ store: bad });
-let res = reload(store, SEED);
+let res = await reload(store, SEED);
 eq(L().length, 15, "unparseable data falls back to seed");
 check([...bad.keys()].some(k => k.startsWith("blockbook.data.corrupt-")), "corrupt data QUARANTINED, not discarded");
 eq(bad.get([...bad.keys()].find(k => k.includes("corrupt"))), "{ this is not json", "quarantined copy is byte-identical");
@@ -153,21 +153,21 @@ check(res.notice !== null, "a banner explains what happened");
 
 const newer = new Map([["blockbook.data", JSON.stringify({ app: "blockbook", schemaVersion: 99, worlds: [], settings: {} })]]);
 installDOM({ store: newer });
-res = reload(store, SEED);
+res = await reload(store, SEED);
 eq(store.state.fatal, true, "S3 newer schema -> fatal, refuses to load");
 eq(store.state.data, null, "S3 no data loaded");
-store.writeNow();
+await store.writeNow();
 check(newer.get("blockbook.data").includes('"schemaVersion":99'), "S3 newer-schema file is NOT overwritten");
 
 const foreign = new Map([["blockbook.data", JSON.stringify({ app: "some-other-app", data: 1 })]]);
 installDOM({ store: foreign });
-reload(store, SEED);
+await reload(store, SEED);
 eq(L().length, 15, "foreign JSON falls back to seed");
 check([...foreign.keys()].some(k => k.includes("corrupt")), "foreign JSON quarantined too");
 
 console.log("\n=== escaping in rendered cards ===");
 installDOM();
-reload(store, SEED);
+await reload(store, SEED);
 store.commitLocation({ ...base, id: null, name: '<img src=x onerror=alert(1)>', dimension: "overworld",
                        x: 1, y: 1, z: 1, tags: ["<b>evil"] });
 const cardsHTML = L().map(views.cardHTML).join("");

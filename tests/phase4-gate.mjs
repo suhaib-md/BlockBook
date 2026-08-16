@@ -9,7 +9,7 @@ const store = await import("../src/store.js");
 const views = await import("../src/views.js");
 
 const SEED = seedLocations();
-reload(store, SEED);
+await reload(store, SEED);
 const ALL = store.activeLocations();
 
 console.log("=== G1  conversion, positive ===");
@@ -125,7 +125,7 @@ check(panel.includes("62.5"), "converter shows the conflict distance");
 check(panel.includes("78 / 30"), "converter shows the computed nether target");
 
 console.log("\n=== re-pairing does not orphan a third portal ===");
-reload(store, SEED);
+await reload(store, SEED);
 const L2 = () => store.activeLocations();
 store.commitLocation({ ...L2().find(l => l.id === "loc_015"), linkedPortalId: "loc_003" });
 eq(L2().find(l => l.id === "loc_015").linkedPortalId, "loc_003", "Fortress now points at Portal 631");
@@ -135,7 +135,7 @@ const asym = L2().filter(l => l.linkedPortalId && L2().find(p => p.id === l.link
 eq(asym.length, 0, "no asymmetric links anywhere after re-pairing");
 
 console.log("\n=== broken-pair surfacing ===");
-reload(store, SEED);
+await reload(store, SEED);
 eq(P.brokenPairs(store.activeLocations()).length, 0, "seed data has no broken pairs");
 store.commitLocation({ ...store.activeLocations().find(l => l.id === "loc_015"), x: 9000, z: 9000 });
 eq(P.brokenPairs(store.activeLocations()).length, 1, "moving a partner far away yields exactly 1 broken pair");

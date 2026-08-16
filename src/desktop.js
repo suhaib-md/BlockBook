@@ -110,6 +110,48 @@ async function applyHotkey(accelerator) {
   }
 }
 
+/* --------------------------------------------------------------------------
+   FILE STORAGE (Phase 10)
+   The write protocol lives in Rust — atomicity there is real. This is the thin
+   call layer. docs/02-TRD.md §5.3
+   -------------------------------------------------------------------------- */
+
+async function invoke(cmd, args) {
+  const { invoke: inv } = await import("@tauri-apps/api/core");
+  return inv(cmd, args);
+}
+
+/**
+ * A storage backend for store.js, or null in the browser (where localStorage
+ * stays in charge). Same shape as the localStorage backend, so store.js never
+ * learns which one it has.
+ */
+function desktopStorage() {
+  if (!isDesktop()) return null;
+  return {
+    kind: "file",
+    info:            () => invoke("storage_info"),
+    read:            () => invoke("storage_read"),
+    write:  (contents) => invoke("storage_write", { contents }),
+    quarantine:      () => invoke("storage_quarantine"),
+    backups:         () => invoke("storage_backups"),
+    readBackup: (name) => invoke("storage_read_backup", { name }),
+    openFolder:      () => invoke("storage_open_folder"),
+  };
+}
+
+/** Native save-as. Returns the path, or null if the user cancelled. */
+async function exportDialog(defaultName, contents) {
+  if (!isDesktop()) return null;
+  return invoke("export_dialog", { defaultName, contents });
+}
+
+/** Native open. Returns the file's text, or null if cancelled. */
+async function importDialog() {
+  if (!isDesktop()) return null;
+  return invoke("import_dialog");
+}
+
 export {
   isDesktop,
   copyText,
@@ -117,4 +159,7 @@ export {
   setAlwaysOnTop,
   onWindowShown,
   applyHotkey,
+  desktopStorage,
+  exportDialog,
+  importDialog,
 };

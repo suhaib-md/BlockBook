@@ -5,7 +5,7 @@ const dom = installDOM();
 const { check, eq, done } = makeChecker();
 const store = await import("../src/store.js");
 const views = await import("../src/views.js");
-reload(store, seedLocations());
+await reload(store, seedLocations());
 
 console.log("=== tokens & structure ===");
 const css = stripComments(readSrc("style.css"));
